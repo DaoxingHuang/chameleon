@@ -11,7 +11,8 @@
     "build:core": "pnpm -w -r build",
     "test": "pnpm -w -r test",
     "lint:core": "eslint packages/core/src --ext .js,.t,.tsx",
-    "lint:fix": "eslint --fix"
+    "lint:fix": "eslint --fix",
+     "prepare": "husky install"
   },
   "keywords": [
     "3D",
