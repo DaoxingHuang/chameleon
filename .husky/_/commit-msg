@@ -1,2 +1,4 @@
 #!/usr/bin/env sh
 . "$(dirname "$0")/h"
+echo "Running commit-msg hook"
+pnpm commitlint --edit $1
