@@ -8,13 +8,14 @@
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,
-    "declarationDir": "types",
+    "declarationDir": "dist",
     "sourceMap": true,
     "baseUrl": "./",
     "emitDeclarationOnly": true,
     "skipLibCheck": true,
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+       "@chameleon/core": ["../../core/src"]
     }
   },
   "exclude": ["node_modules", "types", "packages/*/tests"]

@@ -1,11 +1,11 @@
 import { AsyncSeriesHook, AsyncSeriesWaterfallHook, AsyncSeriesBailHook, AsyncParallelHook, SyncHook } from "tapable";
 import type { RenderingContext, RenderRequest } from "./RenderingContext";
-import { PipelineLogger } from "./Logger";
+import { Logger, PipelineLogger } from "./Logger";
 import { EngineAdapter } from "./EngineAdapter";
-import { Plugin } from "./Plugin";
+import { IPlugin } from "@/Plugin";
 
 export type StageHooks = {
-  engineInit: AsyncSeriesHook<[RenderingContext]>;
+  initEngine: AsyncSeriesHook<[RenderingContext]>;
   resourceLoad: AsyncSeriesWaterfallHook<[RenderingContext]>;
   resourceParse: AsyncSeriesBailHook<[RenderingContext], any>;
   buildScene: AsyncSeriesWaterfallHook<[RenderingContext]>;
@@ -14,25 +14,14 @@ export type StageHooks = {
   dispose: SyncHook<[RenderingContext]>;
 };
 
-export class Pipeline {
+export class Pipeline<TEngine = any, TScene = any, TCamera = any, TOptions = any> {
   public hooks: StageHooks;
-  public logger?: PipelineLogger;
-  // export interface EngineAdapter {
-  //   readonly name: string;
-  //   init(container: HTMLElement, ctx: RenderingContext): Promise<void>;
-  //   loadResource?(src: string, ctx: RenderingContext): Promise<any>;
-  //   parseResource?(resource: any, ctx: RenderingContext): Promise<any>;
-  //   buildScene?(parsed: any, ctx: RenderingContext): Promise<any>;
-  //   startRenderLoop?(ctx: RenderingContext, onFrame: (dt: number) => void): void;
-  //   stopRenderLoop?(ctx: RenderingContext): void;
-  //   createTextureFromElement?(el: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement): any;
-  //   updateVideoTexture?(el: HTMLVideoElement): void;
-  //   dispose?(): void;
-  // }
-  constructor(public adapter: EngineAdapter) {
+  public logger?: Logger = console;
+
+  constructor(public adapter: EngineAdapter<TEngine, TScene, TCamera, TOptions>) {
     this.adapter = adapter;
     this.hooks = {
-      engineInit: new AsyncSeriesHook(["ctx"]),
+      initEngine: new AsyncSeriesHook(["ctx"]),
       resourceLoad: new AsyncSeriesWaterfallHook(["ctx"]),
       resourceParse: new AsyncSeriesBailHook(["ctx"]),
       buildScene: new AsyncSeriesWaterfallHook(["ctx"]),
@@ -42,11 +31,15 @@ export class Pipeline {
     };
   }
 
-  use(plugin: Plugin) {
+  use(plugin: IPlugin) {
     plugin.apply(this);
   }
 
-  setLogger(logger: PipelineLogger) {
+  usePreset(plugins: IPlugin[]) {
+    plugins.forEach((p) => this.use(p));
+  }
+
+  setLogger(logger: Logger) {
     this.logger = logger;
   }
 
@@ -69,12 +62,11 @@ export class Pipeline {
 
     // engineInit
     checkAbort();
-    await this.hooks.engineInit.promise(ctx);
+    await this.hooks.initEngine.promise(ctx);
 
     // resourceLoad (waterfall)
     checkAbort();
     const afterLoad = await this.hooks.resourceLoad.promise(ctx);
-    ctx.rawAssets = afterLoad.rawAssets ?? afterLoad;
 
     // parse (bail)
     checkAbort();
@@ -86,7 +78,6 @@ export class Pipeline {
     // buildScene
     checkAbort();
     const afterBuild = await this.hooks.buildScene.promise(ctx);
-    ctx.scene = afterBuild.scene ?? ctx.scene;
 
     // start render loop (adapter-managed)
     ctx.renderState = ctx.renderState ?? { running: true, frameCount: 0 };
@@ -97,13 +88,6 @@ export class Pipeline {
         this.hooks.renderLoop.callAsync(ctx, (err?: any) => {
           if (err) {
             ctx.renderState!.lastError = err;
-            this.logger?.push({
-              type: "error",
-              hook: "renderLoop",
-              plugin: "renderLoop",
-              start: Date.now(),
-              error: String(err)
-            });
           }
         });
       });
@@ -121,10 +105,10 @@ export class Pipeline {
   async dispose(ctx: RenderingContext) {
     try {
       ctx.abortController.abort();
-    } catch (e) {}
+    } catch (e) { }
     try {
       this.hooks.dispose.call(ctx);
-    } catch (e) {}
+    } catch (e) { }
     // this.adapter.stopRenderLoop?.(ctx);
     this.adapter.dispose?.();
   }

@@ -1,15 +1,13 @@
 import React, { useRef, useState } from "react";
-import { GLPipeline } from "@chameleon/core";
-import { ThreeAdapter } from "@chameleon/adapters";
-import {
-  GLTFLoaderPlugin,
-  ValidatorPlugin,
-  CustomShaderPlugin,
-  VideoTexturePlugin,
-  DeviceStatePlugin
-} from "@chameleon/plugins";
-import { PipelineLogger } from "@chameleon/core";
-import { attachInterceptorToPipeline } from "@chameleon/core";
+import { Pipeline, type RenderRequest, type IPlugin as PipelinePlugin } from "@chameleon/core";
+import { GalaceanAdapter } from "@chameleon/adapters/src";
+
+
+import { attachLoggerToPipeline } from "@chameleon/core";
+import type { RenderingContext } from "@chameleon/core";
+import { GLTFLoaderPlugin } from "@chameleon/plugins";
+
+// import { attachInterceptorToPipeline } from "@chameleon/core";
 
 // expose for devtools
 declare global {
@@ -19,6 +17,17 @@ declare global {
   }
 }
 
+// export class GLTFLoaderPlugin implements PipelinePlugin {
+//   name = "GLTFLoaderPlugin";
+//   apply(pipeline: Pipeline): void {
+//     pipeline.hooks.initEngine.tapPromise(this.name, async (ctx: RenderingContext): Promise<void> => {
+//       const { container, adapter } = ctx;
+//       // const container = document.getElementById('app') as HTMLElement;
+//       await adapter.initEngine(container, ctx);
+//     });
+//   }
+// }
+
 export default function App() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [status, setStatus] = useState("idle");
@@ -26,56 +35,35 @@ export default function App() {
 
   const loadDemo = async () => {
     setStatus("initializing");
-    const adapter = new ThreeAdapter();
-    const pipeline = new GLPipeline(adapter);
+    const adapter = new GalaceanAdapter();
+    const pipeline = new Pipeline(adapter);
+    attachLoggerToPipeline(pipeline, console);
     // attach plugins
     const plugins = [
       new GLTFLoaderPlugin(),
-      new ValidatorPlugin(),
-      new CustomShaderPlugin(),
-      new VideoTexturePlugin(),
-      new DeviceStatePlugin()
+      // new ValidatorPlugin(),
+      // new CustomShaderPlugin(),
+      // new VideoTexturePlugin(),
+      // new DeviceStatePlugin()
     ];
     plugins.forEach((p) => pipeline.use(p));
-    // expose plugin list to devtools
-    (window as any).__GLPIPE_PLUGINS__ = plugins.map((p) => ({ name: p.name }));
+    // plugins.forEach((p) => pipeline.use(p));
+    // // expose plugin list to devtools
+    // (window as any).__GLPIPE_PLUGINS__ = plugins.map((p) => ({ name: p.name }));
 
-    const logger = new PipelineLogger();
-    pipeline.setLogger(logger);
-    attachInterceptorToPipeline(pipeline, logger);
-    // expose logger to devtools (devtools app can set this into its store by window global)
-    (window as any).__GLPIPE_LOGGER__ = logger;
+    // const logger = new PipelineLogger();
+    // pipeline.setLogger(logger);
+    // attachInterceptorToPipeline(pipeline, logger);
+    // // expose logger to devtools (devtools app can set this into its store by window global)
+    // (window as any).__GLPIPE_LOGGER__ = logger;
 
     // create request with simple inline glTF-like structure
-    const DEMO_MODEL = {
-      asset: { version: "2.0" },
-      materials: [
-        { name: "baseMat", extras: {} },
-        {
-          name: "screenMat",
-          extras: {
-            "biz:decorate": {
-              type: "video",
-              source: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
-            }
-          }
-        }
-      ],
-      // For demo we rely on buildScene falling back to programmatic geometry if parsed scene absent.
-      nodes: [
-        {
-          name: "base",
-          extras: { materialName: "baseMat", size: { x: 2, y: 0.1, z: 2 }, pos: { x: 0, y: 0.05, z: 0 } }
-        },
-        {
-          name: "screen",
-          extras: { materialName: "screenMat", size: { x: 1.2, y: 0.7, z: 0.05 }, pos: { x: 0, y: 0.8, z: 0 } }
-        }
-      ]
-    };
+
+    const data: RenderRequest = { id: "demo", source: 'https://mdn.alipayobjects.com/chain_myent/uri/file/as/mynftmerchant/202503101107170115.gltf' };
 
     try {
-      const ctx = await pipeline.run(containerRef.current!, { id: "demo", source: DEMO_MODEL });
+
+      const ctx = await pipeline.run(document.getElementById('canvas') as HTMLCanvasElement, data);
       // attach pipeline ref for dispose
       (ctx as any).pipelineInstance = pipeline;
       (window as any).__GLPIPE_CTX__ = ctx;
@@ -105,7 +93,6 @@ export default function App() {
 
   return (
     <div className="w-screen h-screen flex">
-      <div ref={containerRef} style={{ flex: 1, background: "#111" }} />
       <div style={{ width: 360, background: "#0b0b0b", color: "#ddd", padding: 12 }}>
         <div className="flex gap-2">
           <button className="bg-slate-700 px-3 py-1 rounded" onClick={loadDemo}>
@@ -127,6 +114,8 @@ export default function App() {
           </div>
         </div>
       </div>
+      <canvas id="canvas" style={{ flex: 1, background: "#111" }} />
+
     </div>
   );
 }

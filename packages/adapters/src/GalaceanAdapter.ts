@@ -1,40 +1,57 @@
-// dynamic import style; to use Galacean, install @galacean/engine
-import type { RenderingContext } from "@chameleon/core";
-import { Engine } from "@galacean/engine";
+import { EngineAdapter, RenderingContext } from "@chameleon/core";
+import { Scene, Camera, WebGLEngine as GLEngine, WebGLGraphicDeviceOptions, WebGLEngine, AssetType, GLTFResource } from "@galacean/engine";
+// import { WebGLEngine,Camera } from "@galacean/engine";
 
-export class GalaceanAdapter {
+
+/** ，
+ * Adapter for Galacean engine.
+ * To use this adapter, install `@galacean/engine` in your project.
+ * Galacean engine is a web-first 3D engine, see @link https://www.galacean.com/engine for more details.
+ */
+export class GalaceanAdapter implements EngineAdapter<GLEngine, Scene, Camera, WebGLGraphicDeviceOptions> {
+
   name = "galacean";
-  private engine: any;
-  private scene: any;
-  private camera: any;
+  engine!: GLEngine;
+  scene!: Scene;
+  camera!: Camera;
 
-  async init(container: HTMLElement, ctx?: RenderingContext) {
-    // const galacean = await import('@galacean/engine').catch((e) => {
-    //   console.warn('Galacean not available. Install @galacean/engine to enable.');
-    //   throw e;
-    // });
-    // const { Engine } = galacean;
-    this.engine = new Engine(container);
-    this.engine.run();
+  async initEngine(container: HTMLElement, ctx: RenderingContext, options?: WebGLGraphicDeviceOptions): Promise<RenderingContext> {
+    const graphicDeviceOptions = options as WebGLGraphicDeviceOptions | undefined;
+    this.engine = await WebGLEngine.create({ canvas: container as HTMLCanvasElement, graphicDeviceOptions });
     this.scene = this.engine.sceneManager.activeScene;
-    this.camera = this.scene.createRootEntity("Camera");
-    ctx && (ctx.engineHandles = { engine: this.engine, scene: this.scene, camera: this.camera });
+    const rootEntity = this.scene.createRootEntity("root");
+    const cameraEntity = rootEntity.createChild("camera");
+    this.camera = cameraEntity.addComponent(Camera);
+    this.engine.run();
+    this.engine.canvas.resizeByClientSize();
+    ctx.engineHandles = { engine: this.engine, scene: this.scene, camera: this.camera };
+    return ctx;
   }
 
-  async loadResource(src: string) {
-    if (!this.engine) throw new Error("Galacean engine not initialized");
-    return this.engine.resourceManager.load(src);
+
+  async loadResources(src: string[], ctx: RenderingContext): Promise<RenderingContext> {
+    const engine = ctx?.engineHandles?.engine;
+    if (!engine) throw new Error("Galacean engine not initialized");
+    // const reesources = src.map((s) => ({ url: s, type: AssetType.GLTF }));
+    ctx.rawAssets = await this.engine.resourceManager.load(src);
+    debugger;
+    return ctx;
   }
 
-  async parseResource(resource: any) {
-    return resource;
+  async parseResource(resource: any, ctx: RenderingContext) {
+    ctx.parsedGLTF = resource;
+    return ctx;
   }
 
-  async buildScene(parsed: any, ctx?: RenderingContext) {
-    if (parsed?.defaultSceneRoot) {
-      this.scene.addRootEntity(parsed.defaultSceneRoot);
-      ctx && (ctx.scene = this.scene);
-    }
+  async buildScene(parsed: any, ctx: RenderingContext): Promise<RenderingContext> {
+    const { scene } = ctx?.engineHandles ?? {};
+    const { rawAssets } = ctx;
+    if (!scene) throw new Error("Galacean engine not initialized");
+    if (!rawAssets) throw new Error("No assets to build scene");
+    const mainAssets = rawAssets[0] as GLTFResource;
+    const defaultSceneRoot = mainAssets.instantiateSceneRoot();
+    const rootEntity = scene.getRootEntity();
+    rootEntity.addChild(defaultSceneRoot);
     return ctx;
   }
 
@@ -48,11 +65,7 @@ export class GalaceanAdapter {
     requestAnimationFrame(loop);
   }
 
-  stopRenderLoop() {}
-  async applyCustomShader(_shader: any, _ctx: RenderingContext) {
-    console.warn("Galacean custom shader application needs implementation specific to engine API.");
-  }
   dispose() {
-    this.engine?.destroy && this.engine.destroy();
+    this.engine.destroy();
   }
 }

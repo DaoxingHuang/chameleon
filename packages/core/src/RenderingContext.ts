@@ -1,3 +1,5 @@
+import { EngineAdapter } from "./EngineAdapter";
+
 export type RenderRequest = {
   id: string;
   source: string | object | ArrayBuffer;
@@ -8,7 +10,7 @@ export type RenderRequest = {
 export interface RenderingContext {
   request: RenderRequest;
   container: HTMLElement;
-  adapter: any;
+  adapter: EngineAdapter<any, any, any, any>;
   rawAssets?: any;
   parsedGLTF?: any;
   scene?: any;

@@ -1,6 +1,8 @@
 import { Pipeline } from "./Pipeline";
 
-export interface Plugin {
+export interface IPlugin {
   name: string;
   apply: (pipeline: Pipeline) => void;
 }
+
+

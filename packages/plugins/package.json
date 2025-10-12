@@ -1,15 +1,18 @@
 {
   "name": "@chameleon/plugins",
   "version": "1.0.0",
-  "main": "dist/index.js",
-  "module": "dist/index.esm.js",
+  "main": "dist/index.esm.js",
+  "module": "src/index.ts",
   "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
     "build": "tsc -b",
     "test": "vitest"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@chameleon/core": "workspace:*",
+     "@chameleon/adapters": "workspace:*"
+  },
   "devDependencies": {
     "typescript": "^5.9.3"
   }

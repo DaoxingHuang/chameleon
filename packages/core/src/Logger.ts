@@ -10,6 +10,16 @@ export type LogEntry = {
   error?: any;
 };
 
+// this.logger?.push({
+//               type: "error",
+//               hook: "renderLoop",
+//               plugin: "renderLoop",
+//               start: Date.now(),
+//               error: String(err)
+//             });
+
+
+
 export class PipelineLogger {
   private records: LogEntry[] = [];
   onRecord?: (rec: LogEntry) => void;
@@ -24,4 +34,11 @@ export class PipelineLogger {
   clear() {
     this.records.length = 0;
   }
+}
+
+export interface Logger {
+  info(...msg: any[]): void
+  warn(...msg: any[]): void
+  error(...msg: any[]): void
+  debug(...msg: any[]): void
 }

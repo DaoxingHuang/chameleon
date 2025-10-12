@@ -7,7 +7,6 @@ import typescript from "@rollup/plugin-typescript";
 import json from "@rollup/plugin-json";
 // import dts from "rollup-plugin-dts";
 // import pkg from "./package.json";
-
 const extensions = [".ts", ".tsx", ".js", ".jsx"];
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -23,7 +22,7 @@ const external = [
 ];
 
 const plugins = [
-  resolve({ extensions }), // Resolve modules
+  resolve({ extensions, browser: true }), // Resolve modules
   commonjs(), // Convert CommonJS to ES6 modules
   babel({
     extensions,
@@ -31,18 +30,8 @@ const plugins = [
     babelHelpers: "bundled"
   }),
   json(), // Handle JSON imports
-  typescript({
-     tsconfig: path.resolve(__dirname, "packages/core/tsconfig.json"),
-    exclude: [
-      "node_modules/**",
-      "dist/**",
-      "examples/**",
-      "tests/**",
-      "**/*.test.ts",
-      "**/*.spec.ts",
-      /^@chameleon\/.+/,
-    ]
-  }), // Handle TypeScript files
+  // dts(), // Generate TypeScript declaration files
+  // Handle TypeScript files
   isProduction && terser() // Minify in production
 ];
 
@@ -58,7 +47,61 @@ export default [
       }
     ],
     external,
-    plugins
+    plugins: [...plugins, typescript({
+      tsconfig: path.resolve(__dirname, "packages/core/tsconfig.json"),
+      exclude: [
+        "node_modules/**",
+        "dist/**",
+        "examples/**",
+        "tests/**",
+        "**/*.test.ts",
+        "**/*.spec.ts",
+      ]
+    })]
+  },
+  {
+    input: path.resolve(__dirname, "packages/adapters/src/index.ts"),
+    output: [
+      {
+        file: path.resolve(__dirname, "packages/adapters/dist/index.esm.js"),
+        format: "esm",
+        sourcemap: true
+      }
+    ],
+    external,
+    plugins: [...plugins, typescript({
+      tsconfig: path.resolve(__dirname, "packages/adapters/tsconfig.json"),
+      exclude: [
+        "node_modules/**",
+        "dist/**",
+        "examples/**",
+        "tests/**",
+        "**/*.test.ts",
+        "**/*.spec.ts",
+      ]
+    })]
+  },
+  {
+    input: path.resolve(__dirname, "packages/plugins/src/index.ts"),
+    output: [
+      {
+        file: path.resolve(__dirname, "packages/plugins/dist/index.esm.js"),
+        format: "esm",
+        sourcemap: true
+      }
+    ],
+    external,
+    plugins: [...plugins, typescript({
+      tsconfig: path.resolve(__dirname, "packages/plugins/tsconfig.json"),
+      exclude: [
+        "node_modules/**",
+        "dist/**",
+        "examples/**",
+        "tests/**",
+        "**/*.test.ts",
+        "**/*.spec.ts",
+      ]
+    })]
   }
   // Main build for CJS
   // {
