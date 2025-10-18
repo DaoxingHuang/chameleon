@@ -1,5 +1,5 @@
 {
-  "name": "@chameleon/adapters",
+  "name": "@chameleon/utils",
   "version": "1.0.0",
   "main": "dist/index.esm.js",
   "module": "src/index.ts",
@@ -10,14 +10,12 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@galacean/engine": "^1.6.5",
     "@chameleon/core": "workspace:*",
     "three": "^0.180.0"
   },
   "devDependencies": {
     "typescript": "^5.9.3",
     "vitest": "^0.32.0"
-  },
-  "peerDependencies": {
-    "@galacean/engine": "^1.6.5"
   }
 }

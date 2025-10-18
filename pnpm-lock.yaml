@@ -90,6 +90,9 @@ importers:
       '@chameleon/plugins':
         specifier: workspace:*
         version: link:../packages/plugins
+      '@galacean/engine':
+        specifier: ^1.6.5
+        version: 1.6.5
       '@headlessui/react':
         specifier: ^2.2.9
         version: 2.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -209,6 +212,12 @@ importers:
         specifier: ^4.4.9
         version: 4.5.14(@types/node@24.7.1)(terser@5.44.0)
 
+  packages/docs:
+    devDependencies:
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   packages/plugins:
     dependencies:
       '@chameleon/adapters':
@@ -221,6 +230,25 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+
+  packages/utils:
+    dependencies:
+      '@chameleon/core':
+        specifier: workspace:*
+        version: link:../core
+      '@galacean/engine':
+        specifier: ^1.6.5
+        version: 1.6.5
+      three:
+        specifier: ^0.180.0
+        version: 0.180.0
+    devDependencies:
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^0.32.0
+        version: 0.32.4(terser@5.44.0)
 
 packages:
 

@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "esnext",
+    "target": "esnext",
+    "skipDefaultLibCheck": true,
+    "declaration": true,
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true,
+    "declarationDir": "dist",
+    "sourceMap": true,
+    "baseUrl": "./",
+    "emitDeclarationOnly": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@/*": ["src/*"],
+       "@chameleon/core": ["../../core/src"]
+    }
+  },
+  "exclude": ["node_modules", "types", "packages/*/tests"]
+}

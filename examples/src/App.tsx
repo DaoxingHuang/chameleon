@@ -6,6 +6,7 @@ import { GalaceanAdapter } from "@chameleon/adapters/src";
 import { attachLoggerToPipeline } from "@chameleon/core";
 import type { RenderingContext } from "@chameleon/core";
 import { GLTFLoaderPlugin } from "@chameleon/plugins";
+import { EnvironmentPlugin } from "./plugins/EnvironmentPlugin";
 
 // import { attachInterceptorToPipeline } from "@chameleon/core";
 
@@ -41,6 +42,7 @@ export default function App() {
     // attach plugins
     const plugins = [
       new GLTFLoaderPlugin(),
+      new EnvironmentPlugin(),
       // new ValidatorPlugin(),
       // new CustomShaderPlugin(),
       // new VideoTexturePlugin(),
