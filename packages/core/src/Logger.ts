@@ -18,8 +18,6 @@ export type LogEntry = {
 //               error: String(err)
 //             });
 
-
-
 export class PipelineLogger {
   private records: LogEntry[] = [];
   onRecord?: (rec: LogEntry) => void;
@@ -37,8 +35,8 @@ export class PipelineLogger {
 }
 
 export interface Logger {
-  info(...msg: any[]): void
-  warn(...msg: any[]): void
-  error(...msg: any[]): void
-  debug(...msg: any[]): void
+  info(...msg: any[]): void;
+  warn(...msg: any[]): void;
+  error(...msg: any[]): void;
+  debug(...msg: any[]): void;
 }

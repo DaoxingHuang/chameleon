@@ -29,7 +29,7 @@ export class PipelineAdapterPlugin implements IPlugin {
       // prefer adapter.initEngine when implemented; allow adapter to mutate ctx
       try {
         if (typeof ctx.adapter.initEngine === "function") {
-          ctx.engineHandles = await ctx.adapter.initEngine(ctx.container, ctx, (ctx.request as any).options);
+          ctx.engineHandles = await ctx.adapter.initEngine(ctx.container, ctx, ctx.request.options);
         }
       } catch (err) {
         // attach error and rethrow so pipeline can clean up

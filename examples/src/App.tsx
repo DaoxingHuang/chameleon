@@ -1,8 +1,6 @@
 import React from "react";
 import { Pipeline, type RenderRequest } from "@chameleon/core";
 import { GalaceanAdapter } from "@chameleon/adapters/src";
-
-
 import { attachLoggerToPipeline } from "@chameleon/core";
 import { PipelineAdapterPlugin, DefCameraControlPlugin, DefGalaceanInteractionPlugin } from "@chameleon/plugins";
 import { EnvironmentSkyboxPlugin } from "./plugins/EnvironmentSkyboxPlugin";

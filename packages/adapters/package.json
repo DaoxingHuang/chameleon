@@ -10,8 +10,7 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@chameleon/core": "workspace:*",
-    "three": "^0.180.0"
+    "@chameleon/core": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

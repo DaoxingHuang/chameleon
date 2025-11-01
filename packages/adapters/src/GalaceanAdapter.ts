@@ -75,7 +75,6 @@ export class GalaceanAdapter
     } catch {
       // non-fatal: some environments may not expose resize helper
     }
-
     // prepare and return typed engine handles
     const engineHandles = { engine: this.engine, scene: this.scene, camera: this.camera };
     return engineHandles;

@@ -23,7 +23,7 @@ export interface RenderingContext<
   container: HTMLCanvasElement | HTMLElement;
   adapter: EngineAdapter<TEngine, TScene, TCamera, TOptions>;
   // parsedGLTF kept for backwards-compat / convenience; can map to TResources if appropriate
-  parsedGLTF?: {targetEngineEntity:TEntity, animations?: any[]; meshes?: any[] };
+  parsedGLTF?: { targetEngineEntity: TEntity; animations?: any[]; meshes?: any[] };
   abortController: AbortController;
   abortSignal: AbortSignal;
   pipeline?: Pipeline;
@@ -50,10 +50,7 @@ export interface RenderingContext<
     stagesCompleted?: Record<string, boolean>;
     stageLocks?: Record<string, boolean>;
     // stageCleanups[stageName] = array of async/sync cleanup functions invoked before re-running that stage
-    stageCleanups?: Record<
-      string,
-      Array<(ctx: RenderingContext<TEngine, TScene, TCamera>) => void | Promise<void>>
-    >;
+    stageCleanups?: Record<string, Array<(ctx: RenderingContext<TEngine, TScene, TCamera>) => void | Promise<void>>>;
     [key: string]: any;
   };
   [key: string]: any;

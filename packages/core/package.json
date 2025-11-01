@@ -1,31 +1,46 @@
 {
   "name": "@chameleon/core",
   "version": "1.0.0",
-  "main": "dist/index.esm.js",
-  "module": "src/index.ts",
-  "types": "dist/index.d.ts",
   "type": "module",
-  "publishConfig": {
-    "registry": "https://registry.npmjs.org/",
-    "access": "public",
-    "tag": "latest"
+  "main": "dist/index.esm.js",
+  "module": "dist/index.cjs.js",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.cjs.js",
+      "types": "./dist/types/index.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "engines": {
+    "node": ">=16"
   },
   "scripts": {
-    "build": "tsc -b",
-    "test": "vitest"
+    "clean": "rimraf dist node_modules/.cache/core.tsbuildinfo",
+    "build": "pnpm run clean && tsc -b",
+    "build:watch": "tsc -b -w",
+    "dev": "ts-node-dev --respawn --transpile-only --prefer-ts-exts src/index.ts",
+    "test": "vitest",
+    "lint": "eslint 'src/**/*.{ts,tsx,js}' --fix",
+    "prepare": "pnpm run build",
+    "prepublishOnly": "pnpm run build"
   },
+  "files": [
+    "dist/**/*"
+  ],
   "dependencies": {
     "lodash-es": "^4.17.21",
     "tapable": "^2.3.0"
   },
   "devDependencies": {
     "typescript": "^5.9.3",
-    "vitest": "^0.32.0"
+    "vitest": "^0.32.0",
+    "ts-node-dev": "^2.0.0",
+    "ts-node": "^10.9.1",
+    "rimraf": "^5.0.0",
+    "eslint": "^8.0.0"
   },
-  "files": [
-    "dist/**/*",
-    "types/**/*"
-  ],
   "lint-staged": {
     "*.ts": "eslint --fix",
     "*.js": "eslint --fix",

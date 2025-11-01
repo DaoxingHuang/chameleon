@@ -21,9 +21,7 @@ import { Pipeline } from "./Pipeline";
 export function attachLoggerToPipeline(pipeline: Pipeline, logger: Logger): void {
   // high-resolution timer with fallback to Date.now()
   const now = () =>
-    typeof performance !== "undefined" && typeof performance.now === "function"
-      ? performance.now()
-      : Date.now();
+    typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
 
   // iterate over the known hook keys using the pipeline.hooks type to keep typing accurate
   const hookKeys = Object.keys(pipeline.hooks) as Array<keyof typeof pipeline.hooks>;
@@ -71,7 +69,7 @@ export function attachLoggerToPipeline(pipeline: Pipeline, logger: Logger): void
                         plugin: tapInfo.name,
                         start,
                         end,
-                        duration: end - start,
+                        duration: end - start
                       });
                     } catch (_) {
                       /* swallow logging errors */
@@ -89,7 +87,7 @@ export function attachLoggerToPipeline(pipeline: Pipeline, logger: Logger): void
                         start,
                         end,
                         duration: end - start,
-                        error: String(err),
+                        error: String(err)
                       });
                     } catch (_) {
                       /* swallow logging errors */
@@ -108,7 +106,7 @@ export function attachLoggerToPipeline(pipeline: Pipeline, logger: Logger): void
                     start,
                     end,
                     duration: end - start,
-                    error: String(err),
+                    error: String(err)
                   });
                 } catch (_) {
                   /* swallow logging errors */
@@ -125,7 +123,7 @@ export function attachLoggerToPipeline(pipeline: Pipeline, logger: Logger): void
           }
 
           return tapInfo;
-        },
+        }
       });
     } catch {
       // if intercept installation fails for this hook, continue to the next hook
