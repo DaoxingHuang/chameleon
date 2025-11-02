@@ -1,15 +1,91 @@
 {
   "compilerOptions": {
+    // Target ECMAScript version for emitted code. Keep "esnext" and let bundler/transpiler handle downleveling.
     "target": "esnext",
+    // Module format for emitted code. "esnext" preserves ES module syntax for modern bundlers.
     "module": "esnext",
+    // Library type definitions to include (DOM + latest ECMAScript features).
+    "lib": [
+      "esnext",
+      "dom"
+    ],
+     "declarationDir": "types",
+    // Module resolution strategy (Node-style resolution).
     "moduleResolution": "node",
-    "lib": ["DOM", "ES2020"],
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
+    // Allow importing JSON modules.
     "resolveJsonModule": true,
-    "sourceMap": true,
+    // Emit declaration (.d.ts) files for consumers of your packages.
     "declaration": true,
+    // Emit source maps for declaration files (.d.ts.map).
+    // Useful when debugging type declarations or when consumers want to trace types back to sources.
+    "declarationMap": true,
+    // Emit code as well as declarations (false means don't emit only declarations).
+    "emitDeclarationOnly": false,
+    // Default output directory for compiled files (packages may override this).
+    "outDir": "dist",
+    // Root directory for input source files to preserve folder layout in outDir.
+    "rootDir": ".",
+    // Enable composite projects (required for project references).
+    // Forces certain constraints (e.g. "declaration": true) and enables `tsc --build` optimizations.
     "composite": true,
-  }
+    // Enable incremental compilation to speed up subsequent builds by reusing build info.
+    // Works together with "tsBuildInfoFile" to store cache metadata.
+    "incremental": true,
+    // Location for incremental build info (centralized cache to avoid many .tsbuildinfo files).
+    // Pointing to a single cache (e.g. node_modules/.cache) reduces clutter in each package.
+    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo",
+    // Enable strict type-checking options.
+    "strict": true,
+    // Skip type checking of declaration files from dependencies (speeds up build).
+    "skipLibCheck": true,
+    // Skip checks on default library (lib.d.ts) — can further speed up compilation at small safety cost.
+    "skipDefaultLibCheck": true,
+    // Report errors on unused local variables (helps keep code clean and avoid dead code).
+    // Note: this can be noisy during refactors; disable per-file with @ts-ignore or adjust rule as needed.
+    "noUnusedLocals": true,
+    // Report errors on unused function parameters (optional, uncomment to enable)
+    // "noUnusedParameters": true,
+    // Base path used to resolve non-relative module names.
+    "baseUrl": ".",
+    // Path aliases useful for monorepo local imports.
+    "paths": {
+      "@chameleon/*": [
+        "packages/*/src"
+      ]
+    },
+    // Where to look for ambient type definitions (default: node_modules/@types).
+    "typeRoots": [
+      "node_modules/@types"
+    ],
+    // Default ambient type packages to include (e.g. node types for tooling).
+    "types": [
+      // "node"
+    ],
+    // Enable interoperability between CommonJS and ES Modules (allow default imports from CJS).
+    "esModuleInterop": true
+  },
+  // Files/directories to include in compilation (root: include all packages).
+  "include": [
+    "packages/**/*"
+  ],
+  // Files/directories to exclude from compilation.
+  "exclude": [
+    "node_modules",
+    "dist",
+    "packages/*/tests"
+  ],
+  "references": [
+    {
+      "path": "packages/core"
+    },
+    {
+      "path": "packages/plugins"
+    },
+    {
+      "path": "packages/adapters"
+    },
+    {
+      "path": "packages/utils"
+    }
+  ]
 }

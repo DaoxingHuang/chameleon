@@ -1,14 +1,35 @@
 {
   "name": "@chameleon/plugins",
   "version": "1.0.0",
-  "main": "dist/index.esm.js",
-  "module": "src/index.ts",
-  "types": "dist/index.d.ts",
   "type": "module",
-  "scripts": {
-    "build": "tsc -b",
-    "test": "vitest"
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.cjs.js",
+      "types": "./dist/types/index.d.ts"
+    },
+    "./package.json": "./package.json"
   },
+  "engines": {
+    "node": ">=16"
+  },
+  "scripts": {
+    "clean": "rimraf dist node_modules/.cache/plugins.tsbuildinfo",
+    "build": "pnpm run clean && tsc -b",
+    "build:watch": "tsc -b -w",
+    "dev": "ts-node-dev --respawn --transpile-only --prefer-ts-exts src/index.ts",
+    "test": "vitest",
+    "lint": "eslint 'src/**/*.{ts,tsx,js}' --fix",
+    "prepare": "pnpm run build",
+    "prepublishOnly": "pnpm run build"
+  },
+  "files": [
+    "dist/**/*",
+    "types/**/*"
+  ],
   "dependencies": {
     "@chameleon/core": "workspace:*",
     "@chameleon/adapters": "workspace:*"

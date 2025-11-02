@@ -153,7 +153,6 @@ export class DefGalaceanInteractionPlugin implements IPlugin {
 
         // Compute center + radius for framing
         const { center, radius } = this.computeModelBoundingSphere(parsedEntity);
-
         // Ensure camera component exists
         const camera = cameraEntity.getComponent(Camera);
         if (!camera) {

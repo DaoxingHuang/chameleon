@@ -1,8 +1,8 @@
-import { AsyncSeriesHook, AsyncSeriesWaterfallHook, AsyncSeriesBailHook, AsyncParallelHook, SyncHook } from "tapable";
+import { AsyncSeriesHook, AsyncSeriesWaterfallHook, AsyncSeriesBailHook, AsyncParallelHook, SyncHook, Hook } from "tapable";
 import type { RenderingContext, RenderRequest } from "./RenderingContext";
 import { Logger } from "./Logger";
 import { EngineAdapter } from "./EngineAdapter";
-import { IPlugin } from "@/Plugin";
+import { IPlugin } from "./Plugin";
 
 /**
  *StageHooks - typed collection of pipeline hooks.
@@ -41,17 +41,18 @@ export type StageHooks = {
  * @template TOptions
  */
 export class Pipeline<TEngine = any, TScene = any, TCamera = any, TOptions = any> {
-    // public, readonly hooks collection exposed for plugins to tap into
+  // public, readonly hooks collection exposed for plugins to tap into
   public readonly hooks: StageHooks;
-    // logger instance; default to PipelineLogger but can be swapped for testing or silencing
+  // logger instance; default to PipelineLogger but can be swapped for testing or silencing
   public logger: Logger = console;
 
   /**
    * Construct a Pipeline with a concrete EngineAdapter.
    * @param adapter The engine adapter responsible for engine-specific operations.
-   */constructor(public adapter: EngineAdapter<TEngine, TScene, TCamera, TOptions>) {
-    // assign adapter (explicit for clarity)
-    this.adapter = adapter;
+   */ 
+  constructor(public adapter: EngineAdapter<TEngine, TScene, TCamera, TOptions>) {
+    // // assign adapter (explicit for clarity)
+    // this.adapter = adapter;
 
     // instantiate hooks with argument names to improve debugging/stack traces
     this.hooks = {
@@ -64,7 +65,7 @@ export class Pipeline<TEngine = any, TScene = any, TCamera = any, TOptions = any
       dispose: new SyncHook<[RenderingContext]>(["ctx"])
     };
   }
-    /**
+  /**
    * getHook - safely retrieve a typed hook by name.
    * Throws if the hook name is invalid to catch typos early.
    */
@@ -75,7 +76,56 @@ export class Pipeline<TEngine = any, TScene = any, TCamera = any, TOptions = any
     return this.hooks[name];
   }
 
-    /**
+    // helper: remove taps with the given pluginName from a single hook, return whether removed any
+  private _removeTapsFromHook(hook: AnyStageHook | Hook, pluginName: string): boolean {
+    if (!hook || !Array.isArray(hook.taps)) return false;
+    const before = hook.taps.length;
+    // keep taps except those from pluginName
+    hook.taps = hook.taps.filter((t: any) => t && t.name !== pluginName);
+    // clear compiled/cache fields so hook will recompile next time it's called
+    // different hook types may cache different keys; remove commonly used cache names
+    try {
+      // delete hook._call;
+      // delete hook._promise;
+      // delete hook._x;
+      // delete hook._tap;
+    } catch {}
+    return hook.taps.length !== before;
+  }
+
+
+  /**
+   * Uninstall by plugin name (or plugin instance name)
+   * - Removes all taps registered with the given plugin name across all stages.
+   * - Returns true if any tap was removed.
+   */
+  public uninstall(pluginName: string): boolean {
+    if (!pluginName) return false;
+    let removedAny = false;
+    const hookKeys = Object.keys(this.hooks) as (keyof StageHooks)[];
+    for (const k of hookKeys) {
+      const hook = (this.hooks as any)[k];
+      try {
+        const removed = this._removeTapsFromHook(hook, pluginName);
+        if (removed) removedAny = true;
+      } catch (e) {
+        try { this.logger?.error?.(`Pipeline.uninstall: failed to remove taps for ${String(k)} - ${pluginName}`, e); } catch {}
+      }
+    }
+    return removedAny;
+  }
+
+
+  /**
+   * uninstallPlugin - convenience overload: accept plugin instance or name
+   */
+  public uninstallPlugin(plugin: { name?: string } | string): boolean {
+    const name = typeof plugin === "string" ? plugin : plugin?.name;
+    if (!name) return false;
+    return this.uninstall(name);
+  }
+
+  /**
    * use - register a plugin (plugin implements IPlugin.apply).
    * Keeps plugin installation simple and discoverable.
    */
@@ -114,7 +164,7 @@ export class Pipeline<TEngine = any, TScene = any, TCamera = any, TOptions = any
     for (const name of names) {
       ensureNotAborted();
       const hook = this.hooks[name] as any; // will cast to concrete types below
-
+      console.log("run stage:", name);
       if (!hook) throw new Error(`Unknown hook "${String(name)}"`);
 
       // dispatch based on stage name -> use correct tapable API and keep types explicit
@@ -136,7 +186,9 @@ export class Pipeline<TEngine = any, TScene = any, TCamera = any, TOptions = any
           } else {
             // fallback for unexpected shapes: try callAsync/call
             if (typeof hook.callAsync === "function") {
-              await new Promise<void>((resolve, reject) => hook.callAsync(ctx, (err?: any) => (err ? reject(err) : resolve())));
+              await new Promise<void>((resolve, reject) =>
+                hook.callAsync(ctx, (err?: any) => (err ? reject(err) : resolve()))
+              );
             } else if (typeof hook.call === "function") {
               hook.call(ctx);
             } else {
@@ -153,7 +205,9 @@ export class Pipeline<TEngine = any, TScene = any, TCamera = any, TOptions = any
             if (typeof hook.promise === "function") {
               await hook.promise(ctx);
             } else {
-              await new Promise<void>((resolve, reject) => hook.callAsync(ctx, (err?: any) => (err ? reject(err) : resolve())));
+              await new Promise<void>((resolve, reject) =>
+                hook.callAsync(ctx, (err?: any) => (err ? reject(err) : resolve()))
+              );
             }
           } else if (typeof hook.promise === "function") {
             await hook.promise(ctx);
@@ -169,7 +223,9 @@ export class Pipeline<TEngine = any, TScene = any, TCamera = any, TOptions = any
           } else {
             // fallback to other shapes if necessary
             if (typeof hook.callAsync === "function") {
-              await new Promise<void>((resolve, reject) => hook.callAsync(ctx, (err?: any) => (err ? reject(err) : resolve())));
+              await new Promise<void>((resolve, reject) =>
+                hook.callAsync(ctx, (err?: any) => (err ? reject(err) : resolve()))
+              );
             } else if (typeof hook.promise === "function") {
               await hook.promise(ctx);
             } else {
@@ -208,7 +264,7 @@ export class Pipeline<TEngine = any, TScene = any, TCamera = any, TOptions = any
       abortSignal: abortController.signal,
       renderState: { running: false, frameCount: 0 },
       pipeline: this,
-      engineHandles: { engine: null as any, scene: null as any, camera: null as any },
+      engineHandles: { engine: null as any, scene: null as any, camera: null as any }
     };
 
     const order: (keyof StageHooks)[] = [
@@ -217,7 +273,7 @@ export class Pipeline<TEngine = any, TScene = any, TCamera = any, TOptions = any
       "resourceParse",
       "buildScene",
       "renderLoop",
-      "postProcess",
+      "postProcess"
     ];
 
     try {
@@ -234,11 +290,15 @@ export class Pipeline<TEngine = any, TScene = any, TCamera = any, TOptions = any
             this.hooks.renderLoop.callAsync(ctx, (err?: any) => {
               if (err) {
                 ctx.renderState!.lastError = err;
-                try { this.logger.error?.("renderLoop hook error:", err); } catch (_) {}
+                try {
+                  this.logger.error?.("renderLoop hook error:", err);
+                } catch (_) {}
               }
             });
           } catch (e) {
-            try { this.logger.error?.("Error invoking renderLoop hooks:", e); } catch (_) {}
+            try {
+              this.logger.error?.("Error invoking renderLoop hooks:", e);
+            } catch (_) {}
           }
         });
       } else {
@@ -252,10 +312,18 @@ export class Pipeline<TEngine = any, TScene = any, TCamera = any, TOptions = any
 
       return ctx;
     } catch (err) {
-      try { this.logger.error?.("Pipeline run error:", err); } catch (_) {}
-      try { abortController.abort(); } catch (_) {}
-      try { this.hooks.dispose.call(ctx); } catch (_) {}
-      try { this.adapter.dispose?.(); } catch (_) {}
+      try {
+        this.logger.error?.("Pipeline run error:", err);
+      } catch (_) {}
+      try {
+        abortController.abort();
+      } catch (_) {}
+      try {
+        this.hooks.dispose.call(ctx);
+      } catch (_) {}
+      try {
+        this.adapter.dispose?.();
+      } catch (_) {}
       throw err;
     }
   }
@@ -280,14 +348,16 @@ export class Pipeline<TEngine = any, TScene = any, TCamera = any, TOptions = any
       "resourceParse",
       "buildScene",
       "renderLoop",
-      "postProcess",
+      "postProcess"
     ];
     const startIndex = order.indexOf(start);
     if (startIndex === -1) throw new Error(`Unknown start stage "${String(start)}"`);
     const remaining = order.slice(startIndex);
 
     // 1) abort previous run
-    try { ctx.abortController?.abort(); } catch {}
+    try {
+      ctx.abortController?.abort();
+    } catch {}
 
     // 2) new abort controller for this run
     const newAbortController = new AbortController();
@@ -308,12 +378,16 @@ export class Pipeline<TEngine = any, TScene = any, TCamera = any, TOptions = any
           try {
             await fn(ctx);
           } catch (e) {
-            try { this.logger.error?.(`Error during cleanup for stage ${String(stage)}:`, e); } catch (_) {}
+            try {
+              this.logger.error?.(`Error during cleanup for stage ${String(stage)}:`, e);
+            } catch (_) {}
           }
         }
       }
     } catch (e) {
-      try { this.logger.error?.("Error while executing stageCleanups:", e); } catch (_) {}
+      try {
+        this.logger.error?.("Error while executing stageCleanups:", e);
+      } catch (_) {}
     }
 
     // 4) clear stagesCompleted flags for the stages we're about to run
@@ -327,7 +401,9 @@ export class Pipeline<TEngine = any, TScene = any, TCamera = any, TOptions = any
 
     // 5) if starting after initEngine but engine not present, try to initEngine first
     if (startIndex > 0) {
-      const enginePresent = Boolean((ctx.engineHandles && ctx.engineHandles.engine) || (this.adapter && this.adapter.engine));
+      const enginePresent = Boolean(
+        (ctx.engineHandles && ctx.engineHandles.engine) || (this.adapter && this.adapter.engine)
+      );
       if (!enginePresent) {
         ensureNotAborted();
         await this.hooks.initEngine.promise(ctx);
@@ -350,11 +426,15 @@ export class Pipeline<TEngine = any, TScene = any, TCamera = any, TOptions = any
               this.hooks.renderLoop.callAsync(ctx, (err?: any) => {
                 if (err) {
                   ctx.renderState!.lastError = err;
-                  try { this.logger.error?.("renderLoop hook error:", err); } catch (_) {}
+                  try {
+                    this.logger.error?.("renderLoop hook error:", err);
+                  } catch (_) {}
                 }
               });
             } catch (e) {
-              try { this.logger.error?.("Error invoking renderLoop hooks:", e); } catch (_) {}
+              try {
+                this.logger.error?.("Error invoking renderLoop hooks:", e);
+              } catch (_) {}
             }
           });
         } else {
@@ -365,13 +445,19 @@ export class Pipeline<TEngine = any, TScene = any, TCamera = any, TOptions = any
 
       return ctx;
     } catch (err) {
-      try { this.logger.error?.("Pipeline runFrom error:", err); } catch (_) {}
-      try { ctx.abortController?.abort(); } catch (_) {}
-      try { this.hooks.dispose.call(ctx); } catch (_) {}
-      try { this.adapter.dispose?.(); } catch (_) {}
+      try {
+        this.logger.error?.("Pipeline runFrom error:", err);
+      } catch (_) {}
+      try {
+        ctx.abortController?.abort();
+      } catch (_) {}
+      try {
+        this.hooks.dispose.call(ctx);
+      } catch (_) {}
+      try {
+        this.adapter.dispose?.();
+      } catch (_) {}
       throw err;
     }
   }
-
 }
-

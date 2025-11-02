@@ -1,8 +1,7 @@
-
 /**
  * Checks if the provided element is of the specified HTML element type.
  * This method is generalized to work with any HTMLElement type (e.g., div, canvas, p, etc.).
- * 
+ *
  * @param element - The element to check. Should be a valid HTMLElement.
  * @param type - The HTML element type to check against, e.g., HTMLDivElement, HTMLCanvasElement, HTMLParagraphElement, etc.
  * @returns `true` if the element is of the specified type, otherwise `false`.

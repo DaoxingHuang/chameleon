@@ -1,15 +1,14 @@
 import path from "path";
-import resolve from "@rollup/plugin-node-resolve";
-import commonjs from "@rollup/plugin-commonjs";
-import babel from "@rollup/plugin-babel";
-import { terser } from "rollup-plugin-terser";
-import typescript from "@rollup/plugin-typescript";
-import json from "@rollup/plugin-json";
+import fs from "fs";
+
+// const fs = require("fs");
+
+import rollupBase from './rollup.config.base.js';
 // import dts from "rollup-plugin-dts";
 // import pkg from "./package.json";
 const extensions = [".ts", ".tsx", ".js", ".jsx"];
 
-const isProduction = process.env.NODE_ENV === "production";
+// const isProduction = process.env.NODE_ENV === "production";
 
 const external = [
   "react",
@@ -21,181 +20,73 @@ const external = [
   // Add any other external dependencies here
 ];
 
-const plugins = [
-  resolve({ extensions, browser: true }), // Resolve modules
-  commonjs(), // Convert CommonJS to ES6 modules
-  babel({
-    extensions,
-    exclude: "node_modules/**",
-    babelHelpers: "bundled"
-  }),
-  json(), // Handle JSON imports
-  // dts(), // Generate TypeScript declaration files
-  // Handle TypeScript files
-  isProduction && terser() // Minify in production
+const dontCompiles = [
+  "docs",
+  "devtools"
+  // Add any packages here that should not be compiled by Rollup
 ];
 
-export default [
-  // Main build for ESM
-  {
-    input: path.resolve(__dirname, "packages/core/src/index.ts"),
-    output: [
-      {
-        file: path.resolve(__dirname, "packages/core/dist/index.esm.js"),
-        format: "esm",
-        sourcemap: true
-      }
-    ],
-    external,
-    plugins: [...plugins, typescript({
-      tsconfig: path.resolve(__dirname, "packages/core/tsconfig.json"),
-      exclude: [
-        "node_modules/**",
-        "dist/**",
-        "examples/**",
-        "tests/**",
-        "**/*.test.ts",
-        "**/*.spec.ts",
-      ]
-    })]
-  },
-  {
-    input: path.resolve(__dirname, "packages/adapters/src/index.ts"),
-    output: [
-      {
-        file: path.resolve(__dirname, "packages/adapters/dist/index.esm.js"),
-        format: "esm",
-        sourcemap: true
-      }
-    ],
-    external,
-    plugins: [...plugins, typescript({
-      tsconfig: path.resolve(__dirname, "packages/adapters/tsconfig.json"),
-      exclude: [
-        "node_modules/**",
-        "dist/**",
-        "examples/**",
-        "tests/**",
-        "**/*.test.ts",
-        "**/*.spec.ts",
-      ]
-    })]
-  },
-  {
-    input: path.resolve(__dirname, "packages/plugins/src/index.ts"),
-    output: [
-      {
-        file: path.resolve(__dirname, "packages/plugins/dist/index.esm.js"),
-        format: "esm",
-        sourcemap: true
-      }
-    ],
-    external,
-    plugins: [...plugins, typescript({
-      tsconfig: path.resolve(__dirname, "packages/plugins/tsconfig.json"),
-      exclude: [
-        "node_modules/**",
-        "dist/**",
-        "examples/**",
-        "tests/**",
-        "**/*.test.ts",
-        "**/*.spec.ts",
-      ]
-    })]
+const pkgsRoot = path.join(__dirname, "packages");
+const pkgs = fs
+  .readdirSync(pkgsRoot)
+  .filter((dir) => !dontCompiles.includes(dir))
+  .map((dir) => path.join(pkgsRoot, dir))
+  .filter((dir) => fs.statSync(dir).isDirectory())
+  .map((location) => {
+    return {
+      location: location,
+      pkgJson: require(path.resolve(location, "package.json"))
+    };
+  });
+
+  function makeRollupConfigForPkg(pkg) {
+    return rollupBase({
+      input: path.resolve(pkg.location, "src/index.ts"),
+      output: [
+        {
+          // dir:  path.resolve(pkg.location, "dist"),
+          file: path.resolve(pkg.location, "dist/index.esm.js"),
+          format: "esm",
+          sourcemap: true
+        },
+        {
+          //  dir:  path.resolve(pkg.location, "dist"),
+          file: path.resolve(pkg.location, "dist/index.cjs.js"),
+          format: "cjs",
+          sourcemap: true
+        }
+      ],
+      tsconfig: path.resolve(pkg.location, "tsconfig.json"),
+      external,
+      extensions,
+      // declarationDir: path.resolve(pkg.location, "types")
+    });
   }
-  // Main build for CJS
-  // {
-  //   input: path.resolve(__dirname, 'packages/core/src/index.ts'),
-  //   output: [
-  //     {
-  //       file: path.resolve(__dirname, 'dist/core/index.cjs.js'),
-  //       format: 'cjs',
-  //       sourcemap: true,
-  //     },
-  //   ],
-  //   external,
-  //   plugins,
-  // },
-  // // TypeScript declaration files for package
-  // {
-  //   input: path.resolve(__dirname, 'packages/core/src/index.ts'),
-  //   output: [
-  //     {
-  //       file: path.resolve(__dirname, 'dist/core/index.d.ts'),
-  //       format: 'es',
-  //     },
-  //   ],
-  //   plugins: [dts()],
-  // },
-  // // Repeat the above for other packages (e.g., @glpipeline/interactions)
-  // // Interactions package
-  // {
-  //   input: path.resolve(__dirname, 'packages/interactions/src/index.ts'),
-  //   output: [
-  //     {
-  //       file: path.resolve(__dirname, 'dist/interactions/index.esm.js'),
-  //       format: 'esm',
-  //       sourcemap: true,
-  //     },
-  //   ],
-  //   external,
-  //   plugins,
-  // },
-  // {
-  //   input: path.resolve(__dirname, 'packages/interactions/src/index.ts'),
-  //   output: [
-  //     {
-  //       file: path.resolve(__dirname, 'dist/interactions/index.cjs.js'),
-  //       format: 'cjs',
-  //       sourcemap: true,
-  //     },
-  //   ],
-  //   external,
-  //   plugins,
-  // },
-  // {
-  //   input: path.resolve(__dirname, 'packages/interactions/src/index.ts'),
-  //   output: [
-  //     {
-  //       file: path.resolve(__dirname, 'dist/interactions/index.d.ts'),
-  //       format: 'es',
-  //     },
-  //   ],
-  //   plugins: [dts()],
-  // },
-  // // Devtools package
-  // {
-  //   input: path.resolve(__dirname, 'packages/devtools/src/index.tsx'),
-  //   output: [
-  //     {
-  //       file: path.resolve(__dirname, 'dist/devtools/index.esm.js'),
-  //       format: 'esm',
-  //       sourcemap: true,
-  //     },
-  //   ],
-  //   external,
-  //   plugins,
-  // },
-  // {
-  //   input: path.resolve(__dirname, 'packages/devtools/src/index.tsx'),
-  //   output: [
-  //     {
-  //       file: path.resolve(__dirname, 'dist/devtools/index.cjs.js'),
-  //       format: 'cjs',
-  //       sourcemap: true,
-  //     },
-  //   ],
-  //   external,
-  //   plugins,
-  // },
-  // {
-  //   input: path.resolve(__dirname, 'packages/devtools/src/index.tsx'),
-  //   output: [
-  //     {
-  //       file: path.resolve(__dirname, 'dist/devtools/index.d.ts'),
-  //       format: 'es',
-  //     },
-  //   ],
-  //   plugins: [dts()],
-  // },
-];
+
+  if(process.env.NODE_ENV !== 'production'){
+    console.log("Building packages:", pkgs.map(p => p.pkgJson.name).join(", "));
+  }
+
+export default pkgs.map((pkg) => makeRollupConfigForPkg(pkg));
+// export default rollupBase({
+//   input: path.resolve(__dirname, "packages/core/src/index.ts"),
+//   output: [
+//     {
+//       // dir:  path.resolve(__dirname, "packages/core/dist"),
+//       file: path.resolve(__dirname, "packages/core/dist/index.esm.js"),
+//       format: "esm",
+//       sourcemap: true
+//     },
+//     {
+//       //  dir:  path.resolve(__dirname, "packages/core/dist"),
+//       file: path.resolve(__dirname, "packages/core/dist/index.cjs.js"),
+//       format: "cjs",
+//       sourcemap: true
+//     }
+//   ],
+//   tsconfig: path.resolve(__dirname, "packages/core/tsconfig.json"),
+//   external,
+//   extensions,
+//   // declarationDir: path.resolve(__dirname, "packages/core/types")
+// })
+

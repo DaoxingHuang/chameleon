@@ -1,23 +1,32 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "module": "esnext",
-    "target": "esnext",
-    "skipDefaultLibCheck": true,
-    "declaration": true,
-    "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true,
-    "experimentalDecorators": true,
-    "declarationDir": "./dist",
-    "sourceMap": true,
-    "baseUrl": "./",
+    // Set to true if you only want to emit declarations in a separate build step.
     "emitDeclarationOnly": true,
-    "skipLibCheck": true,
+    // Place declarations under package dist/types for clearer package layout.
+    "declarationDir": "dist/types",
+    // Root input folder for this package's sources.
     "rootDir": "src",
+    "outDir": "dist",
+    // Use a package-scoped tsbuildinfo file (centralized cache is under root node_modules).
+    "tsBuildInfoFile": "node_modules/.cache/plugins.tsbuildinfo",
     "paths": {
-      "@/*": ["src/*"],
-       "@chameleon/core": ["../../core/src"]
+      "@/*": [
+        "src/*"
+      ],
+      "@chameleon/core": [
+        "../../core/src"
+      ]
     }
   },
-  "exclude": ["node_modules", "types", "packages/*/tests"]
+  // Include only package sources and local type helpers.
+  "include": [
+    "src/**/*"
+  ],
+  // Exclude build / generated / external folders.
+  "exclude": [
+    "node_modules",
+    "dist",
+    "packages/*/tests"
+  ],
 }

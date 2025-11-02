@@ -1,8 +1,6 @@
 import React from "react";
 import { Pipeline, type RenderRequest } from "@chameleon/core";
 import { GalaceanAdapter } from "@chameleon/adapters/src";
-
-
 import { attachLoggerToPipeline } from "@chameleon/core";
 import { PipelineAdapterPlugin, DefCameraControlPlugin, DefGalaceanInteractionPlugin } from "@chameleon/plugins";
 import { EnvironmentSkyboxPlugin } from "./plugins/EnvironmentSkyboxPlugin";
@@ -77,8 +75,8 @@ export default function App() {
     // attach plugins
     const plugins = [
       new PipelineAdapterPlugin(),
-      new DefCameraControlPlugin(),
-      new DefGalaceanInteractionPlugin()
+      // new DefCameraControlPlugin(),
+      // new DefGalaceanInteractionPlugin()
     ];
     plugins.forEach((p) => pipeline.use(p));
 

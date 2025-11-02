@@ -1,22 +1,78 @@
+// {
+//   "extends": "../../tsconfig.base.json",
+//   "compilerOptions": {
+//     "module": "esnext",
+//     "target": "esnext",
+//     "skipDefaultLibCheck": true,
+//     "declaration": true,
+//     "moduleResolution": "node",
+//     "allowSyntheticDefaultImports": true,
+//     "experimentalDecorators": true,
+//     "declarationDir": "dist",
+//     "sourceMap": true,
+//     "baseUrl": "./",
+//     "emitDeclarationOnly": true,
+//     "skipLibCheck": true,
+//     "paths": {
+//       "@/*": ["src/*"],
+//        "@chameleon/core": ["../../core/src"]
+//     }
+//   },
+//   "exclude": ["node_modules", "types", "packages/*/tests"]
+// }
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "module": "esnext",
-    "target": "esnext",
-    "skipDefaultLibCheck": true,
-    "declaration": true,
-    "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true,
-    "experimentalDecorators": true,
-    "declarationDir": "dist",
-    "sourceMap": true,
-    "baseUrl": "./",
+    // // Emit both JS and declaration files for consumers.
+    // // Set to true if you only want to emit declarations in a separate build step.
     "emitDeclarationOnly": true,
-    "skipLibCheck": true,
+    // // Keep declaration output enabled for package consumers.
+    // "declaration": true,
+    // "declarationMap": true,
+    // // Place declarations under package dist/types for clearer package layout.
+    "declarationDir": "dist/types",
+    // // Root input folder for this package's sources.
+    "rootDir": "src",
+    // // Output folder for compiled JS + types.
+    "outDir": "dist",
+    // // Enable composite mode required for project references and `tsc --build`.
+    // "composite": true,
+    // Use a package-scoped tsbuildinfo file (centralized cache is under root node_modules).
+    "tsBuildInfoFile": "node_modules/.cache/adapters.tsbuildinfo",
+    // // Keep source maps for runtime debugging of emitted JS.
+    // "sourceMap": true,
+    // // Module / target override to ensure package outputs modern modules.
+    // "module": "esnext",
+    // "target": "esnext",
+    // // Allow synthetic default imports for interop with commonjs libs.
+    // "allowSyntheticDefaultImports": true,
+    // // Resolve JSON imports if the package uses them.
+    // "resolveJsonModule": true,
+    // // Enable experimental decorators if used in this package.
+    // "experimentalDecorators": true,
+    // // Optional: keep path mapping local to package for internal imports.
     "paths": {
-      "@/*": ["src/*"],
-       "@chameleon/core": ["../../core/src"]
+      "@/*": [
+        "src/*"
+      ],
+      "@chameleon/core": [
+        "../../core/src"
+      ]
     }
   },
-  "exclude": ["node_modules", "types", "packages/*/tests"]
+  // Include only package sources and local type helpers.
+  "include": [
+    "src/**/*",
+  ],
+  // Exclude build / generated / external folders.
+  "exclude": [
+    "node_modules",
+    "dist",
+    "packages/*/tests"
+  ],
+  // If this package depends on other local packages, add project references here
+  // to enable `tsc --build` to build in dependency order and use incremental builds.
+  // Example:
+  // "references": [{ "path": "../core-utils" }, { "path": "../plugins" }]
+  "references": []
 }
