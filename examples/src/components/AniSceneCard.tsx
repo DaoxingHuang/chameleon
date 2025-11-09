@@ -1,5 +1,5 @@
 import { GalaceanAdapter } from "@chameleon/adapters";
-import type { RenderingContext } from "@chameleon/core";
+import type { IPlugin, RenderingContext } from "@chameleon/core";
 import { attachLoggerToPipeline, Pipeline, type RenderRequest } from "@chameleon/core";
 import {
   DefCameraControlPlugin,
@@ -12,6 +12,7 @@ import React, { useEffect, useRef } from "react";
 import { EnvironmentSkyboxPlugin } from "../plugins/EnvironmentSkyboxPlugin";
 import { LoadingPlugin } from "../plugins/LoadingPlugin";
 
+import { ActionButton } from "./ActionButton";
 import SceneCard from "./SceneCard";
 
 /**
@@ -55,15 +56,38 @@ export default function AniSceneCard({}) {
     return [pipeline, ctx];
   };
 
+  const handleReload = async () => {
+    if (!pipieRef.current) {
+      return;
+    }
+    const { pipeline, ctx } = pipieRef.current;
+
+    // attach plugins
+    const plugins: IPlugin[] = [];
+    plugins.forEach((p) => pipeline!.use(p));
+    const data: RenderRequest = {
+      id: "demo",
+      source: "https://mdn.alipayobjects.com/chain_myent/afts/file/L0FlSKqLR88AAAAAAAAAAAAADvN2AQBr"
+    };
+    ctx.request = data;
+    try {
+      ctx.abortController.abort();
+      await pipeline!.runFrom("resourceLoad", ctx);
+    } catch (e: any) {
+      console.error("Error during model replacement:", e);
+      setLoading(false);
+    }
+    pipieRef.current = { pipeline, ctx };
+    return [pipeline, ctx];
+  };
+
   useEffect(() => {}, []);
 
   return (
     <SceneCard
       externalNode={
         <>
-          {/* <ActionButton onClick={handleReplace}>Dynamic model replacement </ActionButton>
-          <ActionButton onClick={handleSkyBox}>Use Skybox </ActionButton>
-           <ActionButton onClick={handleUninstall}>Uninstall </ActionButton> */}
+          <ActionButton onClick={handleReload}>Reload </ActionButton>
         </>
       }
       title="Galacean Animation Plugin — Single-model enter / idle / click animations"
