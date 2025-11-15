@@ -124,9 +124,7 @@ export class GalceanAnimationPlugin implements IPlugin {
     };
 
     // ensure no duplicate handler
-    try {
-      onEvent(ctx, MODEL_CLICKED, handler);
-    } catch {}
+    offEvent(ctx, MODEL_CLICKED, handler);
     onEvent(ctx, MODEL_CLICKED, handler);
     const remove = () => offEvent(ctx, MODEL_CLICKED, handler);
     return remove;
