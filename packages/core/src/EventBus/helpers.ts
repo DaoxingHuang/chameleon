@@ -1,7 +1,7 @@
 import type { RenderingContext } from "../RenderingContext";
 import EventBus from "./bus";
 
-/** Safe accessor helpers for the per-run EventBus stored on ctx.metadata.eventBus. */
+/** Safe accessor helpers for the per-run EventBus stored on ctx.eventBus. */
 export function getEventBus(ctx?: RenderingContext<any, any, any, any, any, any>): EventBus | undefined {
   try {
     return ctx?.eventBus as EventBus | undefined;
