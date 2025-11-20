@@ -88,12 +88,30 @@ export interface ANTShader {
  * - boolean
  * - typed object describing the uniform type and its value (including textures)
  */
+/**
+ * Strongly-typed enum for ANT uniform types. Using an enum improves
+ * discoverability and keeps code consistent when referring to uniform kinds.
+ */
+export enum ANTUniformType {
+  Float = "float",
+  Vec2 = "vec2",
+  Vec3 = "vec3",
+  Vec4 = "vec4",
+  Mat3 = "mat3",
+  Mat4 = "mat4",
+  Int = "int",
+  Ivec2 = "ivec2",
+  Ivec3 = "ivec3",
+  Ivec4 = "ivec4",
+  Texture = "texture"
+}
+
 export type ANTUniform =
   | number
   | number[]
   | boolean
   | {
-      type: "float" | "vec2" | "vec3" | "vec4" | "mat3" | "mat4" | "int" | "ivec2" | "ivec3" | "ivec4" | "texture";
+      type: ANTUniformType;
       value: any;
     };
 

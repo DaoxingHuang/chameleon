@@ -10,7 +10,7 @@ import {
 } from "@galacean/engine";
 import { SUPPORTED_ADAPTERS } from "./constants";
 import "./extensions/ANT_materials_shaders";
-import "./parsers/MyGLTFMaterialParser";
+import "./parsers/myGLTFMaterialParser";
 
 /**
  * SpecRenderingContext - strongly-typed alias for this adapter's RenderingContext.

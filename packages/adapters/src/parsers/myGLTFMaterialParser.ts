@@ -5,9 +5,9 @@ import {
   GLTFParserType,
   PBRMaterial,
   registerGLTFParser,
-  Shader,
-  Texture2D
+  Shader
 } from "@galacean/engine";
+import { applyANTPropertiesToShader } from "./ANTPropertyBinder";
 
 // Material parser that looks for the ANT_materials_shader material-level
 // extension and, if present, synthesizes a runtime material to replace the
@@ -65,7 +65,6 @@ export class MyGLTFMaterialParser extends GLTFParser {
     // extension (ext), top-level extension (gltfExt), shaderRef and shaderDef.
     const extracted = this.extractANTExtensionData(context, index);
     if (!extracted) return undefined;
-    debugger;
     const { materialInfo, ext, shaderIndex, shaderDef, material, engine } = extracted;
 
     // STEP 2: Validate that we should attempt shader creation. If validation
@@ -132,30 +131,30 @@ export class MyGLTFMaterialParser extends GLTFParser {
         }
 
         // Apply defines/macros (best effort, preserved as comments in original)
-        // try {
-        //   const defines = (shaderDef && shaderDef.defines) || {};
-        //   for (const defName of Object.keys(defines)) {
-        //     const defVal = (defines as any)[defName];
-        //     try {
-        //       if (defVal === true) {
-        //         try {
-        //           // shaderMaterial.shaderData.enableMacro(defName);
-        //         } catch {}
-        //       } else if (defVal) {
-        //         try {
-        //           // shaderMaterial.shaderData.enableMacro(defName, String(defVal));
-        //         } catch {}
-        //       } else {
-        //         try {
-        //           // shaderMaterial.shaderData.disableMacro(defName);
-        //         } catch {}
-        //       }
-        //     } catch {}
-        //   }
-        // } catch {}
+        try {
+          const defines = (shaderDef && shaderDef.defines) || {};
+          for (const defName of Object.keys(defines)) {
+            const defVal = (defines as any)[defName];
+            try {
+              if (defVal === true) {
+                try {
+                  shaderMaterial.shaderData.enableMacro(defName);
+                } catch {}
+              } else if (defVal) {
+                try {
+                  shaderMaterial.shaderData.enableMacro(defName, defVal);
+                } catch {}
+              } else {
+                try {
+                  // shaderMaterial.shaderData.disableMacro(defName);
+                } catch {}
+              }
+            } catch {}
+          }
+        } catch {}
 
         // STEP 5: Bind properties (numbers, arrays, textures) onto shaderData.
-        await this.applyPropertiesToShader(shaderMaterial, ext, context);
+        await applyANTPropertiesToShader(shaderMaterial, ext, context);
 
         // Attach ANT metadata for downstream use
         // @ts-ignore
@@ -270,40 +269,6 @@ export class MyGLTFMaterialParser extends GLTFParser {
     vertexSource = v;
     fragmentSource = f;
     return { vertexSource, fragmentSource } as const;
-  }
-
-  // Helper: Apply material-level properties to the shaderMaterial.shaderData.
-  // Supports numbers (setFloat), arrays (setFloatArray) and textures (setTexture via context.get).
-  private async applyPropertiesToShader(shaderMaterial: BaseMaterial, ext: any, context: GLTFParserContext) {
-    debugger;
-    const props = ext.properties || {};
-    for (const k of Object.keys(props)) {
-      const p = props[k];
-      const rawVal = p && typeof p === "object" && "value" in p ? p.value : p;
-      const type = p && typeof p === "object" && "type" in p ? p.type : null;
-
-      if (type === "number") {
-        try {
-          shaderMaterial.shaderData.setFloat(k, rawVal);
-          continue;
-        } catch {}
-      }
-
-      // if (Array.isArray(rawVal)) {
-      //   try {
-      //     shaderMaterial.shaderData.setFloatArray(k, new Float32Array(rawVal));
-      //     continue;
-      //   } catch {}
-      // }
-
-      if (type === "texture") {
-        try {
-          const texture = await context.get<Texture2D>(GLTFParserType.Texture, rawVal);
-          shaderMaterial.shaderData.setTexture(k, texture);
-          continue;
-        } catch {}
-      }
-    }
   }
 }
 
