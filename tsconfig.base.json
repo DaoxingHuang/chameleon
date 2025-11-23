@@ -5,12 +5,9 @@
     // Module format for emitted code. "esnext" preserves ES module syntax for modern bundlers.
     "module": "esnext",
     // Library type definitions to include (DOM + latest ECMAScript features).
-    "lib": [
-      "esnext",
-      "dom"
-    ],
+    "lib": ["esnext", "dom"],
     "jsx": "react-jsx",
-     "declarationDir": "types",
+    "declarationDir": "types",
     // Module resolution strategy (Node-style resolution).
     "moduleResolution": "node",
     // Allow importing JSON modules.
@@ -50,30 +47,22 @@
     "baseUrl": ".",
     // Path aliases useful for monorepo local imports.
     "paths": {
-      "@chameleon/*": [
-        "packages/*/src"
-      ]
+      "@chameleon/*": ["packages/*/src"]
     },
     // Where to look for ambient type definitions (default: node_modules/@types).
-    "typeRoots": [
-      "node_modules/@types"
-    ],
+    "typeRoots": ["node_modules/@types"],
     // Default ambient type packages to include (e.g. node types for tooling).
     "types": ["react"],
     // Enable interoperability between CommonJS and ES Modules (allow default imports from CJS).
     "esModuleInterop": true
   },
   // Files/directories to include in compilation (root: include all packages).
-  "include": [
-    "packages/**/*"
-  ],
+  "include": ["packages/**/*"],
   // Files/directories to exclude from compilation.
-  "exclude": [
-    "node_modules",
-    "dist",
-    "packages/*/tests",
-    "packages/*/test"
-  ],
+  "exclude": ["node_modules", "dist", ".rollup.cache", "packages/*/tests", "packages/*/test"],
+  "ts-node": {
+    "transpileOnly": true
+  },
   "references": [
     {
       "path": "packages/core"

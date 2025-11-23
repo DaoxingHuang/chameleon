@@ -6,7 +6,7 @@ import { EnvironmentSkyboxPlugin } from "./plugins/EnvironmentSkyboxPlugin";
 
 import AniSceneCard from "./components/AniSceneCard";
 import ReplaceSceneCard from "./components/ReplaceSceneCard";
-
+import ShaderSceneCard from "./components/ShaderSceneCard";
 import Layout from "./layout";
 
 // import { attachInterceptorToPipeline } from "@chameleon/core";
@@ -95,6 +95,7 @@ export default function App() {
       <ReplaceSceneCard/> */}
       <ReplaceSceneCard />
       <AniSceneCard />
+      <ShaderSceneCard />
     </Layout>
   );
 }

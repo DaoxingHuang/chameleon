@@ -20,7 +20,100 @@ export interface GLTF {
   buffers: Buffer[];
   bufferViews: BufferView[];
   accessors: Accessor[];
+  extensions: {
+    // Optional root-level extension for ANT_materials_shader. When present,
+    // it defines one or more named shader entries that materials can reference.
+    ANT_materials_shader?: ANTMaterialsShader;
+    [ext: string]: any;
+  };
 }
+
+/**
+ * Root object for ANT_materials_shader extension.
+ * - version: extension schema version
+ * - shaders: array of named shader definitions that can be referenced by materials
+ */
+export interface ANTMaterialsShader {
+  version: string;
+  shaders: ANTShader[];
+}
+
+/**
+ * A single named shader definition.
+ * - id: unique identifier for this shader entry (used by materials to reference it)
+ * - name: optional human-friendly name for editors or debugging
+ * - version: schema/version string for the shader definition
+ * - shader: contains the actual shader source locations and optional metadata
+ */
+export interface ANTShader {
+  id: string; // shader ID used for referencing
+  name?: string; // optional friendly name for editors/debugging
+  version: string; // shader definition schema/version
+
+  shader: {
+    // URLs or relative paths to shader source files. These should be fetchable
+    // by the loader (e.g. relative to the glTF file location or absolute URLs).
+    // 0 is glsl,1 glsl
+    vertex: [{ type: 0; value: string | { uri: string } }]; // vertex shader URL or source identifier
+    fragment: [{ type: 0; value: string | { uri: string } }]; // fragment shader URL or source identifier
+
+    // Optional preprocessor defines to apply when compiling the shader. Values
+    // may be strings or numbers and should be mapped to engine-specific defines.
+    defines?: Record<string, string | number>;
+
+    // Uniform declarations and default values to bind when creating the material.
+    // Values may be literal numbers/arrays/booleans or typed objects describing
+    // textures and typed uniforms.
+    // properties?: Record<string, ANTUniform>;
+
+    // Optional pipeline hints to guide material creation (engine-specific).
+    pipeline?: {
+      doubleSided?: boolean;
+      alphaMode?: "OPAQUE" | "MASK" | "BLEND";
+      depthTest?: boolean;
+      depthWrite?: boolean;
+      blending?: boolean;
+      side?: number; // engine-specific side constant (e.g. Three.js FrontSide/BackSide/DoubleSide)
+    };
+
+    // Reserved for future adapter-specific extensions.
+    extensions?: Record<string, any>;
+  };
+}
+
+/**
+ * A uniform definition that can be one of:
+ * - primitive number
+ * - array of numbers
+ * - boolean
+ * - typed object describing the uniform type and its value (including textures)
+ */
+/**
+ * Strongly-typed enum for ANT uniform types. Using an enum improves
+ * discoverability and keeps code consistent when referring to uniform kinds.
+ */
+export enum ANTUniformType {
+  Float = "float",
+  Vec2 = "vec2",
+  Vec3 = "vec3",
+  Vec4 = "vec4",
+  Mat3 = "mat3",
+  Mat4 = "mat4",
+  Int = "int",
+  Ivec2 = "ivec2",
+  Ivec3 = "ivec3",
+  Ivec4 = "ivec4",
+  Texture = "texture"
+}
+
+export type ANTUniform =
+  | number
+  | number[]
+  | boolean
+  | {
+      type: ANTUniformType;
+      value: any;
+    };
 
 /**
  * Metadata about the GLTF asset.
@@ -92,7 +185,15 @@ export interface Target {
 export interface Material {
   name?: string;
   pbrMetallicRoughness?: PBRMetallicRoughness;
-  extensions?: any;
+  extensions?: {
+    ANT_materials_shader?: {
+      shader: number; // reference to shader definition by index
+      properties?: Record<string, any>;
+      // fragmentUniforms?: Record<string, any>;
+      description?: string;
+    };
+    [ext: string]: any;
+  };
   extras?: any;
 }
 
