@@ -187,7 +187,6 @@
           "shader": {
             "vertex": [{ "type": 0, "value": { "uri": "./assets/shaders/card/shaders/vertex.glsl" } }],
             "fragment": [{ "type": 0, "value": { "uri": "./assets/shaders/card/shaders/fragment.glsl" } }],
-            "defines": { "GL_FRAGMENT_PRECISION_HIGH": true },
             "pipeline": {
               "doubleSided": true,
               "alphaMode": "BLEND",

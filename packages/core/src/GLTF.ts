@@ -49,36 +49,51 @@ export interface ANTShader {
   id: string; // shader ID used for referencing
   name?: string; // optional friendly name for editors/debugging
   version: string; // shader definition schema/version
+  // Separated `shader` payload describing shader sources, defines,
+  // default properties and pipeline hints. See `ANTShaderSpec` for details.
+  shader: ANTShaderSpec;
+}
 
-  shader: {
-    // URLs or relative paths to shader source files. These should be fetchable
-    // by the loader (e.g. relative to the glTF file location or absolute URLs).
-    // 0 is glsl,1 glsl
-    vertex: [{ type: 0; value: string | { uri: string } }]; // vertex shader URL or source identifier
-    fragment: [{ type: 0; value: string | { uri: string } }]; // fragment shader URL or source identifier
+/**
+ * 描述 ANT shader 的完整载荷：顶点/片段着色器来源、预处理宏、默认属性
+ * 以及可选的渲染流水线提示。将此块提取为独立类型以便在解析器
+ * 与 loader 中复用并保持注释与文档一致。
+ */
+export interface ANTShaderSpec {
+  // 顶点/片段阶段支持两种形式：直接内联 source 字符串或对象引用 { uri }
+  // 数组项目前使用 shape { type: 0; value: string | { uri: string } }
+  vertex: [{ type: 0; value: string | { uri: string } }];
+  fragment: [{ type: 0; value: string | { uri: string } }];
 
-    // Optional preprocessor defines to apply when compiling the shader. Values
-    // may be strings or numbers and should be mapped to engine-specific defines.
-    defines?: Record<string, string | number>;
+  // 编译时要注入的宏/定义，值可以是字符串或数字
+  defines?: Record<string, string | number>;
 
-    // Uniform declarations and default values to bind when creating the material.
-    // Values may be literal numbers/arrays/booleans or typed objects describing
-    // textures and typed uniforms.
-    // properties?: Record<string, ANTUniform>;
+  // 可选：顶层 properties 声明（解析器可选择更严格的 ANTUniform）
+  properties?: Record<string, ANTUniform>;
 
-    // Optional pipeline hints to guide material creation (engine-specific).
-    pipeline?: {
-      doubleSided?: boolean;
-      alphaMode?: "OPAQUE" | "MASK" | "BLEND";
-      depthTest?: boolean;
-      depthWrite?: boolean;
-      blending?: boolean;
-      side?: number; // engine-specific side constant (e.g. Three.js FrontSide/BackSide/DoubleSide)
-    };
-
-    // Reserved for future adapter-specific extensions.
-    extensions?: Record<string, any>;
+  // 可选的渲染流水线提示，用于在创建运行时材质时设置透明/双面等选项
+  pipeline?: {
+    doubleSided?: boolean;
+    alphaMode?: "OPAQUE" | "MASK" | "BLEND";
+    depthTest?: boolean;
+    depthWrite?: boolean;
+    blending?: boolean;
+    side?: number;
   };
+
+  // 供适配器/扩展使用的保留扩展点
+  extensions?: Record<string, any>;
+}
+
+/**
+ * Material-level ANT extension payload.
+ * Extracted as a separate type so it can be referenced throughout the codebase.
+ */
+export interface ANTMaterialExtension {
+  shader: number; // reference to shader definition by index
+  properties?: Record<string, any>;
+  // fragmentUniforms?: Record<string, any>;
+  description?: string;
 }
 
 /**
@@ -186,12 +201,7 @@ export interface Material {
   name?: string;
   pbrMetallicRoughness?: PBRMetallicRoughness;
   extensions?: {
-    ANT_materials_shader?: {
-      shader: number; // reference to shader definition by index
-      properties?: Record<string, any>;
-      // fragmentUniforms?: Record<string, any>;
-      description?: string;
-    };
+    ANT_materials_shader?: ANTMaterialExtension;
     [ext: string]: any;
   };
   extras?: any;
