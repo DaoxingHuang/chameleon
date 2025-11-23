@@ -92,6 +92,14 @@ export interface ANTShaderSpec {
 export interface ANTMaterialExtension {
   shader: number; // reference to shader definition by index
   properties?: Record<string, any>;
+  pipeline?: {
+    doubleSided?: boolean;
+    alphaMode?: "OPAQUE" | "MASK" | "BLEND";
+    depthTest?: boolean;
+    depthWrite?: boolean;
+    blending?: boolean;
+    side?: number;
+  };
   // fragmentUniforms?: Record<string, any>;
   description?: string;
 }

@@ -136,7 +136,12 @@ export class GalaceanGLTFMaterialParser extends GLTFParser {
         const shaderMaterial = new BaseMaterial(engine!, shader);
         shaderMaterial.name = material.name;
         // apply pipeline flags and defines via helpers
-        const pipeline = shaderDef?.shader?.pipeline || {};
+        // Merge pipeline flags: start from the top-level shader definition
+        // and override with any material-level (`ANT_materials_shader`) hints.
+        // This preserves unspecified top-level defaults while allowing per-
+        // material overrides.
+        const mergedPipeline = Object.assign({}, shaderDef?.shader?.pipeline || {}, ext?.pipeline || {});
+        const pipeline = mergedPipeline;
         applyPipelineFlags(shaderMaterial, pipeline, materialInfo);
         applyShaderDefines(shaderMaterial, shaderDef?.shader?.defines || {});
 
