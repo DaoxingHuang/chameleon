@@ -23,220 +23,138 @@ const ALLOWED_ANT_UNIFORM_TYPES: string[] = [
   "mat3",
   "mat4",
   "int",
-  "ivec2",
-  "ivec3",
-  "ivec4",
   "texture",
   "color"
 ];
 
-/**
- * Apply ANT `properties` to a shader material's shaderData.
- *
- * This helper implements binding for common ANT uniform shapes declared in
- * the GLTF `ANT_materials_shader` properties map. It is conservative and
- * resilient: it attempts engine-specific shaderData setters when available
- * and falls back to generic `setFloat`, `setFloatArray` and `setTexture`.
- *
- * Supported types (based on ANTUniform and common usage):
- * - float
- * - vec2, vec3, vec4
- * - mat3, mat4
- * - int, ivec2/3/4
- * - texture (or type: 'texture')
- * - boolean (mapped to float 0/1)
- *
- * The function expects the `properties` entries to follow the pattern used
- * in the parser: either a primitive value (number / array) or a typed object
- * with `type` and `value` fields. Texture descriptors may be a numeric index
- * or an object with `index`.
- */
+function normalizeUniformType(p: any): string | null {
+  if (!p || typeof p !== "object") return null;
+  const t = p.type;
+  if (typeof t === "string") {
+    const lc = t.toLowerCase();
+    return ALLOWED_ANT_UNIFORM_TYPES.includes(lc) ? lc : null;
+  }
+  if (typeof t === "number") {
+    try {
+      const s = String(t);
+      return ALLOWED_ANT_UNIFORM_TYPES.includes(s) ? s : null;
+    } catch {}
+  }
+  return null;
+}
+
+function applyArrayAsUniform(shaderMaterial: BaseMaterial, key: string, arr: any): boolean {
+  if (!arr) return false;
+  const a = arr instanceof Float32Array ? arr : new Float32Array(arr);
+  const len = a.length;
+  if (len === 4) return setVector4(shaderMaterial, key, Array.from(a));
+  if (len === 3) return setVec3(shaderMaterial, key, Array.from(a));
+  if (len === 2) return setVec2(shaderMaterial, key, Array.from(a));
+  return setFloatArray(shaderMaterial, key, a);
+}
+
 export async function applyANTPropertiesToShader(
   shaderMaterial: BaseMaterial,
   ext: { properties?: Record<string, ANTUniform> } | null | undefined,
   context: GLTFParserContext
 ) {
   if (!ext || !ext.properties) return;
-  // debugger; // Removed debugger statement
+
   const props: Record<string, ANTUniform> = ext.properties || {};
-  for (const k of Object.keys(props)) {
-    const p = props[k];
-    // rawVal is the user value (or the typed .value)
-    const isTypedObject = typeof p === "object" && p !== null && "value" in p;
-    const rawVal = isTypedObject ? (p as any).value : (p as ANTUniform);
+  for (const key of Object.keys(props)) {
+    const p = props[key];
+    const isTyped = typeof p === "object" && p !== null && "value" in p;
+    const raw = isTyped ? (p as any).value : (p as ANTUniform);
+    const uniformType = isTyped ? normalizeUniformType(p) : null;
 
-    // Determine a normalized ANTUniformType when possible. The property may
-    // carry either the enum value (from TypeScript sources) or a raw string
-    // from parsed JSON. We try to map both to the ANTUniformType enum.
-    // Uniform type as a runtime string (one of ALLOWED_ANT_UNIFORM_TYPES) when present
-    let uniformType: string | null = null;
-    if (isTypedObject) {
-      const t = (p as any).type;
-      if (typeof t === "string") {
-        const lc = t.toLowerCase();
-        if (ALLOWED_ANT_UNIFORM_TYPES.includes(lc)) uniformType = lc;
-      } else if (typeof t === "number") {
-        // unlikely but guard against numeric enums — fall back to string
-        try {
-          const s = String(t);
-          if (ALLOWED_ANT_UNIFORM_TYPES.includes(s)) uniformType = s;
-        } catch {}
-      }
-    }
-
-    // bind property `k` with runtime type hint `uniformType` and value `rawVal`
-
-    // Normalize boolean -> float
-    // if (typeof rawVal === "boolean") {
-    //   setFloat(shaderMaterial, k, rawVal ? 1 : 0);
-    //   continue;
-    // }
-
-    // If the declared uniform type is texture, bind as texture immediately.
-    // if (uniformType === "texture") {
-    //   await setTexture(shaderMaterial, context, k, rawVal as any);
-    //   continue;
-    // }
-
-    // Numbers -> float
-    // if (typeof rawVal === "number") {
-    //   // try setFloat first
-    //   if (setFloat(shaderMaterial, k, rawVal)) continue;
-    //   // fallback to float array of length 1
-    //   try {
-    //     setFloatArray(shaderMaterial, k, new Float32Array([rawVal]));
-    //   } catch {}
-    //   continue;
-    // }
-
-    // Arrays -> vectors or matrices
-    // if (Array.isArray(rawVal)) {
-    //   try {
-    //     // For vec2/3/4 and matrices, set as Float32Array via setFloatArray.
-    //     setFloatArray(k, new Float32Array(rawVal));
-    //     continue;
-    //   } catch {
-    //     // ignore and fallthrough
-    //   }
-    // }
-
-    // If value is an object, try applying based on the declared uniform type
-    // if (rawVal && typeof rawVal === "object") {
-    // If the declared type is available, prefer that.
-    if (uniformType) {
-      switch (uniformType) {
-        case "color": {
-          setColor(shaderMaterial, k, rawVal);
-          continue;
-        }
-
-        case "texture": {
-          await setTexture(shaderMaterial, context, k, rawVal as any);
-          continue;
-        }
-
-        case "float": {
-          if (typeof rawVal === "number") {
-            setFloat(shaderMaterial, k, rawVal as number);
-            continue;
-          }
-          // if given as array-like, fall through to float array handling
-          if (Array.isArray(rawVal)) {
-            if (setFloatArray(shaderMaterial, k, new Float32Array(rawVal))) continue;
-          }
-          break;
-        }
-
-        case "int": {
-          if (typeof rawVal === "number") {
-            setInt(shaderMaterial, k, rawVal as number);
-            continue;
-          }
-          if (Array.isArray(rawVal)) {
-            if (setIntArray(shaderMaterial, k, rawVal as number[])) continue;
-          }
-          break;
-        }
-
-        case "vec2": {
-          if (Array.isArray(rawVal)) {
-            if (setVec2(shaderMaterial, k, rawVal as number[])) continue;
-          }
-          break;
-        }
-
-        case "vec3": {
-          if (Array.isArray(rawVal)) {
-            if (setVec3(shaderMaterial, k, rawVal as number[])) continue;
-          }
-          break;
-        }
-
-        case "vec4": {
-          if (Array.isArray(rawVal)) {
-            if (setVector4(shaderMaterial, k, rawVal as number[])) continue;
-          }
-          break;
-        }
-
-        case "mat3": {
-          if (Array.isArray(rawVal)) {
-            if (setMat3(shaderMaterial, k, rawVal as number[])) continue;
-          }
-          break;
-        }
-
-        case "mat4": {
-          if (Array.isArray(rawVal)) {
-            if (setMat4(shaderMaterial, k, rawVal as number[])) continue;
-          }
-          break;
-        }
-
-        case "ivec2":
-        case "ivec3":
-        case "ivec4": {
-          if (Array.isArray(rawVal)) {
-            if (setIntArray(shaderMaterial, k, rawVal as number[])) continue;
-          }
-          break;
-        }
-
-        default:
-          break;
-      }
-    }
-
-    // Heuristic: if object contains index -> treat as texture
-    if (typeof (rawVal as any).index === "number") {
-      await setTexture(shaderMaterial, context, k, rawVal as any);
-      continue;
-    }
-
-    // Heuristic: numeric arrays stored under .value
-    if (Array.isArray((rawVal as any).value)) {
-      try {
-        setFloatArray(shaderMaterial, k, new Float32Array((rawVal as any).value));
+    try {
+      // booleans -> float
+      if (typeof raw === "boolean") {
+        setFloat(shaderMaterial, key, raw ? 1 : 0);
         continue;
-      } catch {}
-    }
+      }
 
-    // Unknown object shape: attempt to stringify number-like entries
-    //   try {
-    //     const numeric = Object.keys(rawVal)
-    //       .map((kk) => (typeof (rawVal as any)[kk] === "number" ? (rawVal as any)[kk] : null))
-    //       .filter((v) => v !== null) as number[];
-    //     if (numeric.length > 0) {
-    //       setFloatArray(k, new Float32Array(numeric));
-    //       continue;
-    //     }
-    //   } catch {}
-    // }
+      // explicit texture hint
+      if (uniformType === "texture") {
+        await setTexture(shaderMaterial, context, key, raw as any);
+        continue;
+      }
 
-    // Last resort: if property looks like a texture index (number or {index})
-    if (typeof rawVal === "number") {
-      await setTexture(shaderMaterial, context, k, rawVal as any);
-      continue;
+      // number -> float (first choice)
+      if (typeof raw === "number") {
+        if (setFloat(shaderMaterial, key, raw)) continue;
+        // fallback: treat numeric as texture index
+        await setTexture(shaderMaterial, context, key, raw as any);
+        continue;
+      }
+
+      // arrays
+      if (Array.isArray(raw)) {
+        if (applyArrayAsUniform(shaderMaterial, key, raw)) continue;
+      }
+
+      // objects
+      if (raw && typeof raw === "object") {
+        // typed handling
+        if (uniformType) {
+          switch (uniformType) {
+            case "color":
+              setColor(shaderMaterial, key, raw);
+              continue;
+            case "texture":
+              await setTexture(shaderMaterial, context, key, raw as any);
+              continue;
+            case "float":
+              if (typeof raw === "number") {
+                setFloat(shaderMaterial, key, raw as number);
+                continue;
+              }
+              if (Array.isArray(raw) && setFloatArray(shaderMaterial, key, new Float32Array(raw as any))) continue;
+              break;
+            case "int":
+              if (typeof raw === "number") {
+                setInt(shaderMaterial, key, raw as number);
+                continue;
+              }
+              if (Array.isArray(raw) && setIntArray(shaderMaterial, key, raw as any)) continue;
+              break;
+            case "vec2":
+            case "vec3":
+            case "vec4":
+              if (Array.isArray(raw) && applyArrayAsUniform(shaderMaterial, key, raw)) continue;
+              break;
+            case "mat3":
+              if (Array.isArray(raw) && setMat3(shaderMaterial, key, raw as any)) continue;
+              break;
+            case "mat4":
+              if (Array.isArray(raw) && setMat4(shaderMaterial, key, raw as any)) continue;
+              break;
+            default:
+              break;
+          }
+        }
+
+        // heuristics
+        if (typeof (raw as any).index === "number") {
+          await setTexture(shaderMaterial, context, key, raw as any);
+          continue;
+        }
+
+        if (Array.isArray((raw as any).value)) {
+          if (applyArrayAsUniform(shaderMaterial, key, (raw as any).value)) continue;
+        }
+
+        // fallback: extract numeric fields
+        const numeric = Object.keys(raw)
+          .map((kk) => (typeof (raw as any)[kk] === "number" ? (raw as any)[kk] : null))
+          .filter((v) => v !== null) as number[];
+        if (numeric.length > 0) {
+          setFloatArray(shaderMaterial, key, new Float32Array(numeric));
+          continue;
+        }
+      }
+    } catch {
+      // swallow per-property failures to remain conservative
     }
   }
 }

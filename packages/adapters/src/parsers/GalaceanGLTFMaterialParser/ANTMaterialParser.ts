@@ -1,4 +1,4 @@
-import type { ANTUniform, GLTF, Material } from "@chameleon/core";
+import type { ANTMaterialExtension, ANTShader, ANTUniform, GLTF, Material } from "@chameleon/core";
 import { GLTFParserContext, GLTFParserType } from "@galacean/engine";
 
 /**
@@ -33,12 +33,12 @@ export class ANTMaterialParser {
    * Return the raw `ANT_materials_shader` extension object for a material.
    * If the material or extension is missing, returns null.
    */
-  getMaterialExtension(materialIndex: number): { shader?: any; properties?: Record<string, ANTUniform> } | null {
+  getMaterialExtension(materialIndex: number): ANTMaterialExtension | null {
     const mats = this.gltf.materials;
     if (!Array.isArray(mats) || typeof materialIndex !== "number") return null;
     const mat = mats[materialIndex];
     if (!mat || !mat.extensions) return null;
-    return mat.extensions.ANT_materials_shader || null;
+    return (mat.extensions.ANT_materials_shader as ANTMaterialExtension) || null;
   }
 
   /**
@@ -46,16 +46,16 @@ export class ANTMaterialParser {
    * The `shader` field in the extension may be a numeric index into
    * `gltf.shaders` or a string identifier. This method attempts both.
    */
-  getShaderDef(materialIndex: number): any | null {
+  getShaderDef(materialIndex: number): ANTShader | undefined | null {
     const ext = this.getMaterialExtension(materialIndex);
     if (!ext) return null;
-    const shaderRef = ext.shader;
+    const index = ext.shader;
     const shaders = this.gltf?.extensions?.ANT_materials_shader?.shaders;
     if (!shaders) return null;
-    if (typeof shaderRef === "number") return shaders[shaderRef] || null;
-    if (typeof shaderRef === "string") {
+    if (typeof index === "number") return shaders[index] || null;
+    if (typeof index === "string") {
       // Try to find by name or id
-      return shaders.find((s: any) => s.name === shaderRef || s.id === shaderRef) || null;
+      return shaders.find((s: any) => s.name === index || s.id === index) || null;
     }
     return null;
   }
@@ -68,7 +68,7 @@ export class ANTMaterialParser {
     const ext = this.getMaterialExtension(materialIndex);
     if (!ext) return {};
     const shaderDef = this.getShaderDef(materialIndex);
-    const shaderProps: Record<string, ANTUniform> = (shaderDef && shaderDef.properties) || {};
+    const shaderProps: Record<string, ANTUniform> = shaderDef?.shader?.properties || {};
     const materialProps: Record<string, ANTUniform> = ext.properties || {};
     // Return a shallow merge where materialProps override shaderProps
     return Object.assign({}, shaderProps, materialProps);
@@ -79,14 +79,14 @@ export class ANTMaterialParser {
    * definition. Sources may be inline (string) or a reference that needs to be
    * resolved by the consumer.
    */
-  getShaderSources(materialIndex: number): { vertex?: string | null; fragment?: string | null } {
-    const shaderDef = this.getShaderDef(materialIndex);
-    if (!shaderDef) return { vertex: null, fragment: null };
-    // Support a few common property names used across variations
-    const vertex = shaderDef.vertex || shaderDef.vertexSource || shaderDef.vertexShader || null;
-    const fragment = shaderDef.fragment || shaderDef.fragmentSource || shaderDef.fragmentShader || null;
-    return { vertex, fragment };
-  }
+  // getShaderSources(materialIndex: number): { vertex?: string | null; fragment?: string | null } {
+  //   const shaderDef = this.getShaderDef(materialIndex);
+  //   if (!shaderDef) return { vertex: null, fragment: null };
+  //   // Support a few common property names used across variations
+  //   const vertex = shaderDef.shader.vertex;
+  //   const fragment = shaderDef.shader.fragment;
+  //   return { vertex, fragment };
+  // }
 
   /**
    * Attempt to resolve texture properties declared in the merged properties map

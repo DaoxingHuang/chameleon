@@ -1,5 +1,6 @@
 import {
   BaseMaterial,
+  Engine,
   GLTFMaterialParser,
   GLTFParser,
   GLTFParserContext,
@@ -11,6 +12,14 @@ import {
 import { ANTShader } from "packages/core/dist/types";
 import ANTMaterialParser from "./ANTMaterialParser";
 import { applyANTPropertiesToShader } from "./ANTPropertyBinder";
+import {
+  applyPipelineFlags,
+  applyShaderDefines,
+  attachExtrasToTarget,
+  ensureAntExtras,
+  getResolvedExtras,
+  persistResolvedSources
+} from "./extras";
 
 // Material parser that looks for the ANT_materials_shader material-level
 // extension and, if present, synthesizes a runtime material to replace the
@@ -73,8 +82,8 @@ export class GalaceanGLTFMaterialParser extends GLTFParser {
     // before (so we can return it if anything fails).
     const antParser = new ANTMaterialParser(context.glTF, context);
     const ext = antParser.getMaterialExtension(index!);
-    if (!ext) return this.galaceanEngineMaterialParser.parse(context, index);
     const shaderDef = antParser.getShaderDef(index!);
+    if (!ext || !shaderDef) return this.galaceanEngineMaterialParser.parse(context, index);
     const gltf = context.glTF;
     const materialInfo = gltf?.materials?.[index!];
     const gltfResource = context.glTFResource;
@@ -83,27 +92,20 @@ export class GalaceanGLTFMaterialParser extends GLTFParser {
     const material = new PBRMaterial(engine);
     material.name = materialInfo?.name || `ant-material-${index}`;
     // stash extension metadata on extras.__ant for plugin/adapter later use
+    // ensure extras container exists and seed schema/shaderRef
+    // prefer existing values when present
     // @ts-ignore
-    material.extras = material.extras || {};
-    // @ts-ignore
-    material.extras.__ant = {
-      schema: ext,
-      shaderRef: ext.shader,
-      resolved: {}
-    };
+    ensureAntExtras(material, ext, ext && ext.shader);
     const shaderName = (shaderDef && shaderDef.id) || `ant_shader_${String(ext.shader)}`;
 
     // STEP 2: Validate that we should attempt shader creation. If validation
     // fails, return the conservative PBRMaterial created above.
     if (!this.validateForShaderApplication(shaderDef, engine))
       return this.galaceanEngineMaterialParser.parse(context, index);
-
     // STEP 3: Resolve vertex/fragment sources (prefer plugin-resolved cache).
-    const resolved =
-      //@ts-ignore
-      material.extras && material.extras.__ant && material.extras.__ant.resolved;
-    let vertexSource: string | null = resolved && resolved.vertexSource ? resolved.vertexSource : null;
-    let fragmentSource: string | null = resolved && resolved.fragmentSource ? resolved.fragmentSource : null;
+    const resolved = getResolvedExtras(material);
+    let vertexSource: string | null = resolved ? resolved.vertexSource : null;
+    let fragmentSource: string | null = resolved ? resolved.fragmentSource : null;
 
     try {
       const sources = await this.resolveShaderSources(shaderDef, vertexSource, fragmentSource);
@@ -111,23 +113,16 @@ export class GalaceanGLTFMaterialParser extends GLTFParser {
       fragmentSource = sources.fragmentSource;
       // persist resolved sources back onto material.extras.__ant.resolved
       try {
-        // @ts-ignore
-        material.extras = material.extras || {};
-        // @ts-ignore
-        material.extras.__ant = material.extras.__ant || {};
-        // @ts-ignore
-        material.extras.__ant.resolved = material.extras.__ant.resolved || {};
-        // @ts-ignore
-        if (vertexSource) material.extras.__ant.resolved.vertexSource = vertexSource;
-        // @ts-ignore
-        if (fragmentSource) material.extras.__ant.resolved.fragmentSource = fragmentSource;
+        // persist resolved sources back onto extras
+        // use helper to keep code concise
+        persistResolvedSources(material, vertexSource, fragmentSource);
       } catch {}
 
       // If either stage missing -> abort to conservative material
-      if (!vertexSource || !fragmentSource) return material;
+      if (!vertexSource || !fragmentSource) return this.galaceanEngineMaterialParser.parse(context, index);
     } catch (e) {
       // failed to fetch/resolve sources -> conservative material
-      return material;
+      return this.galaceanEngineMaterialParser.parse(context, index);
     }
 
     // STEP 4: Attempt to create or reuse a Shader and construct a shader-backed material.
@@ -137,58 +132,30 @@ export class GalaceanGLTFMaterialParser extends GLTFParser {
       let shader: Shader | null = null;
       if (existsShader) shader = existsShader;
       else shader = Shader.create(shaderName, vertexSource as string, fragmentSource as string);
-
       if (shader) {
         const shaderMaterial = new BaseMaterial(engine!, shader);
         shaderMaterial.name = material.name;
-        // apply pipeline render flags (doubleSided / alpha)
-        const pipeline = shaderDef?.shader?.pipeline || {};
-        if (pipeline.doubleSided) {
-          try {
-            // @ts-ignore - BaseMaterial API inside engine
-            shaderMaterial.renderFace = materialInfo && materialInfo.doubleSided ? 2 : 0;
-          } catch {}
-        }
-        if (pipeline.alphaMode === "BLEND") {
-          try {
-            // keep compatibility: if setIsTransparent exists, call it
-            // @ts-ignore
-            shaderMaterial.setIsTransparent && shaderMaterial.setIsTransparent(0, true);
-          } catch {}
-        }
-
-        // Apply defines/macros (best effort, preserved as comments in original)
-        try {
-          const defines = (shaderDef && shaderDef.defines) || {};
-          for (const defName of Object.keys(defines)) {
-            const defVal = (defines as any)[defName];
-            try {
-              if (defVal === true) {
-                shaderMaterial.shaderData.enableMacro && shaderMaterial.shaderData.enableMacro(defName);
-              } else if (defVal) {
-                shaderMaterial.shaderData.enableMacro && shaderMaterial.shaderData.enableMacro(defName, defVal);
-              }
-            } catch {}
-          }
-        } catch {}
+        // apply pipeline flags and defines via helpers
+        // Merge pipeline flags: start from the top-level shader definition
+        // and override with any material-level (`ANT_materials_shader`) hints.
+        // This preserves unspecified top-level defaults while allowing per-
+        // material overrides.
+        const mergedPipeline = Object.assign({}, shaderDef?.shader?.pipeline || {}, ext?.pipeline || {});
+        const pipeline = mergedPipeline;
+        applyPipelineFlags(shaderMaterial, pipeline, materialInfo);
+        applyShaderDefines(shaderMaterial, shaderDef?.shader?.defines || {});
 
         // STEP 5: Bind properties (numbers, arrays, textures) onto shaderData.
         await applyANTPropertiesToShader(shaderMaterial, ext, context);
         // Attach ANT metadata for downstream use
-        // @ts-ignore
-        shaderMaterial.extras = shaderMaterial.extras || {};
-        // @ts-ignore
-        shaderMaterial.extras.__ant =
-          (material as any).extras && (material as any).extras.__ant
-            ? (material as any).extras.__ant
-            : { schema: ext, shaderRef: ext.shader, resolved: resolved || {} };
+        attachExtrasToTarget(shaderMaterial, material, ext, resolved);
         return shaderMaterial;
       }
     } catch (e) {
       // fallthrough to conservative material
     }
 
-    return material;
+    return this.galaceanEngineMaterialParser.parse(context, index);
   }
 
   // NOTE: extraction and shader resolution logic is now handled by
@@ -197,7 +164,7 @@ export class GalaceanGLTFMaterialParser extends GLTFParser {
 
   // Helper: Basic validations to determine whether to try shader application.
   // Keep checks conservative: missing shaderDef or engine should bail out.
-  private validateForShaderApplication(shaderDef: any, engine?: any) {
+  private validateForShaderApplication(shaderDef?: ANTShader | null, engine?: Engine) {
     if (!engine) return false;
     if (!shaderDef) return false;
     return true;
