@@ -77,7 +77,6 @@ export function applyPipelineFlags(targetMaterial: any, pipelineDef: any, materi
  * Best-effort: enable macros when possible and ignore failures.
  */
 export function applyShaderDefines(targetMaterial: BaseMaterial, defines: Record<string, any> | undefined) {
-  debugger;
   if (!targetMaterial || !defines) return;
   const macros = targetMaterial.shaderData.getMacros();
   try {
