@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, feat/adaptor_parse]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
+
+      - name: Setup pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@latest --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm -w -s tsc --noEmit
+
+      - name: Lint
+        run: pnpm -w -s eslint . --ext .ts,.tsx,.js --max-warnings=0 || true
+
+      - name: Run adapters tests
+        run: pnpm --filter ./packages/adapters vitest run --reporter dot
