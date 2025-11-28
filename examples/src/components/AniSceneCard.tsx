@@ -103,7 +103,6 @@ export default function AniSceneCard() {
     return [pipeline, ctx];
   };
 
-  useEffect(() => {}, []);
 
   // cleanup on unmount: dispose pipeline if exists
   useEffect(() => {
