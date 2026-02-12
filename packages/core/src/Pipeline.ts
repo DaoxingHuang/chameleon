@@ -1,11 +1,4 @@
-import {
-  AnyHook,
-  AsyncParallelHook,
-  AsyncSeriesBailHook,
-  AsyncSeriesHook,
-  AsyncSeriesWaterfallHook,
-  SyncHook
-} from "tapable";
+import { AsyncParallelHook, AsyncSeriesBailHook, AsyncSeriesHook, AsyncSeriesWaterfallHook, SyncHook } from "tapable";
 import { EngineAdapter } from "./EngineAdapter";
 import EventBus from "./EventBus";
 import { Logger } from "./Logger";
@@ -114,20 +107,12 @@ export class Pipeline<TEngine = any, TScene = any, TCamera = any, TOptions = any
   }
 
   // helper: remove taps with the given pluginName from a single hook, return whether removed any
-  private _removeTapsFromHook(hook: AnyHook, pluginName: string): boolean {
-    if (!hook || !Array.isArray(hook.taps)) return false;
-    const before = hook.taps.length;
-    // keep taps except those from pluginName
-    hook.taps = hook.taps.filter((t: any) => t && t.name !== pluginName);
-    // clear compiled/cache fields so hook will recompile next time it's called
-    // different hook types may cache different keys; remove commonly used cache names
-    try {
-      // delete hook._call;
-      // delete hook._promise;
-      // delete hook._x;
-      // delete hook._tap;
-    } catch {}
-    return hook.taps.length !== before;
+  private _removeTapsFromHook(hook: Hook | { taps?: any[] }, pluginName: string): boolean {
+    if (!hook || !Array.isArray((hook as any).taps)) return false;
+    const taps = (hook as any).taps;
+    const before = taps.length;
+    (hook as any).taps = taps.filter((t: any) => t && t.name !== pluginName);
+    return (hook as any).taps.length !== before;
   }
 
   /**
@@ -201,7 +186,7 @@ export class Pipeline<TEngine = any, TScene = any, TCamera = any, TOptions = any
     for (const name of names) {
       ensureNotAborted();
       const hook = this.hooks[name] as any; // will cast to concrete types below
-      // console.log("run stage:", name);
+
       if (!hook) throw new Error(`Unknown hook "${String(name)}"`);
 
       // try {
@@ -352,10 +337,6 @@ export class Pipeline<TEngine = any, TScene = any, TCamera = any, TOptions = any
         // ensure at least one call to renderLoop for setup
         await this.hooks.renderLoop.promise(ctx);
       }
-
-      // run postProcess which was already executed in runStages order above,
-      // but keep this here if you want to guarantee postProcess happens after loop setup.
-      await this.hooks.postProcess.promise(ctx);
 
       return ctx;
     } catch (err) {

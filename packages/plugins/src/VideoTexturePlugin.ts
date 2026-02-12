@@ -1,7 +1,15 @@
-export class VideoTexturePlugin {
+import type { IPlugin, Pipeline, RenderingContext } from "@chameleon/core";
+
+/**
+ * VideoTexturePlugin
+ * Replaces materials decorated with `biz:decorate` (type: "video") with a video texture.
+ * Manages video element lifecycle and per-frame texture updates.
+ */
+export class VideoTexturePlugin implements IPlugin {
   name = "VideoTexturePlugin";
-  apply(pipeline: any) {
-    pipeline.hooks.buildScene.tapPromise(this.name, async (ctx: any) => {
+
+  apply(pipeline: Pipeline) {
+    pipeline.hooks.buildScene.tapPromise(this.name, async (ctx: RenderingContext) => {
       const parsed = ctx.parsedGLTF;
       if (!parsed) return ctx;
       if (Array.isArray(parsed.materials)) {
@@ -15,12 +23,14 @@ export class VideoTexturePlugin {
             video.playsInline = true;
             try {
               await video.play();
-            } catch (e) {}
-            const tex = ctx.adapter.createTextureFromElement?.(video);
+            } catch {
+              // autoplay may be blocked by browser policy
+            }
+            const tex = (ctx.adapter as any).createTextureFromElement?.(video);
             try {
-              ctx.scene &&
-                ctx.scene.traverse &&
-                ctx.scene.traverse((child: any) => {
+              const scene = (ctx as any).scene;
+              if (scene?.traverse) {
+                scene.traverse((child: any) => {
                   if (
                     child.isMesh &&
                     child.material &&
@@ -30,7 +40,11 @@ export class VideoTexturePlugin {
                     child.material.needsUpdate = true;
                   }
                 });
-            } catch (e) {}
+              }
+            } catch {
+              // scene traversal may fail if scene is not ready
+            }
+            ctx.metadata = ctx.metadata || {};
             ctx.metadata.videoElements = ctx.metadata.videoElements || [];
             ctx.metadata.videoElements.push(video);
           }
@@ -39,12 +53,11 @@ export class VideoTexturePlugin {
       return ctx;
     });
 
-    pipeline.hooks.renderLoop.tapPromise(this.name, async (ctx: any) => {
+    pipeline.hooks.renderLoop.tapPromise(this.name, async (ctx: RenderingContext) => {
       const videos = ctx.metadata?.videoElements || [];
-      if (videos.length && ctx.adapter.updateVideoTexture) {
-        for (const v of videos) ctx.adapter.updateVideoTexture(v);
+      if (videos.length && (ctx.adapter as any).updateVideoTexture) {
+        for (const v of videos) (ctx.adapter as any).updateVideoTexture(v);
       }
-      return ctx;
     });
   }
 }

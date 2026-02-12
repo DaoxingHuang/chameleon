@@ -1,24 +1,12 @@
 /**
- *
  * Common helpers for RenderingContext.metadata:
  * - initialize the metadata structure
  * - provide utilities for stage locks, cleanup registration, and completion flags
  */
+import type { RenderingContext } from "@chameleon/core";
 
-import type { RenderingContext, StageHooks } from "@chameleon/core";
-
-export type StageName = keyof StageHooks;
-export type StageCleanupFn = (ctx: RenderingContext<any, any, any, any, any, any>) => Promise<void> | void;
-
-// Use the RenderingContext type's metadata shape rather than attempting to access a runtime prototype.
-type RC = RenderingContext<any, any, any, any, any, any>;
-type MetadataType = {
-  stagesCompleted: Record<string, boolean>;
-  stageLocks: Record<string, boolean>;
-  stageCleanups: Record<string, Array<StageCleanupFn>>;
-  failedStage?: string;
-  [key: string]: any;
-};
+export type StageName = string;
+export type StageCleanupFn = (ctx: RenderingContext) => Promise<void> | void;
 
 /**
  * ensureMetadata
@@ -28,8 +16,8 @@ type MetadataType = {
  *   - stagesCompleted: record boolean completed state per stage
  * - Returns the metadata object for convenience.
  */
-export function ensureMetadata(ctx: RC): MetadataType {
-  ctx.metadata = ctx.metadata || ({ stagesCompleted: {}, stageLocks: {}, stageCleanups: {} } as MetadataType);
+export function ensureMetadata(ctx: RenderingContext): NonNullable<RenderingContext["metadata"]> {
+  ctx.metadata = ctx.metadata || {};
   ctx.metadata.stageLocks = ctx.metadata.stageLocks || {};
   ctx.metadata.stageCleanups = ctx.metadata.stageCleanups || {};
   ctx.metadata.stagesCompleted = ctx.metadata.stagesCompleted || {};
