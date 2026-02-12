@@ -1,4 +1,3 @@
-
 /**
  * An object listing the supported adapter names for the application.
  *

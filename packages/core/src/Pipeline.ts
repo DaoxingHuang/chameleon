@@ -1,8 +1,9 @@
+import type { Hook } from "tapable";
 import { AsyncParallelHook, AsyncSeriesBailHook, AsyncSeriesHook, AsyncSeriesWaterfallHook, SyncHook } from "tapable";
-import { EngineAdapter } from "./EngineAdapter";
+import type { EngineAdapter } from "./EngineAdapter";
 import EventBus from "./EventBus";
-import { Logger } from "./Logger";
-import { IPlugin } from "./Plugin";
+import type { Logger } from "./Logger";
+import type { IPlugin } from "./Plugin";
 import type { RenderingContext, RenderRequest } from "./RenderingContext";
 
 /**
@@ -107,7 +108,7 @@ export class Pipeline<TEngine = any, TScene = any, TCamera = any, TOptions = any
   }
 
   // helper: remove taps with the given pluginName from a single hook, return whether removed any
-  private _removeTapsFromHook(hook: Hook | { taps?: any[] }, pluginName: string): boolean {
+  private _removeTapsFromHook(hook: Hook<any, any> | { taps?: any[] }, pluginName: string): boolean {
     if (!hook || !Array.isArray((hook as any).taps)) return false;
     const taps = (hook as any).taps;
     const before = taps.length;

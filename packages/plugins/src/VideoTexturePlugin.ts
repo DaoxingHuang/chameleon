@@ -10,7 +10,7 @@ export class VideoTexturePlugin implements IPlugin {
 
   apply(pipeline: Pipeline) {
     pipeline.hooks.buildScene.tapPromise(this.name, async (ctx: RenderingContext) => {
-      const parsed = ctx.parsedGLTF;
+      const parsed = ctx.parsedGLTF as any;
       if (!parsed) return ctx;
       if (Array.isArray(parsed.materials)) {
         for (const m of parsed.materials) {
@@ -44,9 +44,16 @@ export class VideoTexturePlugin implements IPlugin {
             } catch {
               // scene traversal may fail if scene is not ready
             }
-            ctx.metadata = ctx.metadata || {};
-            ctx.metadata.videoElements = ctx.metadata.videoElements || [];
-            ctx.metadata.videoElements.push(video);
+            if (!ctx.metadata) {
+              ctx.metadata = {
+                stagesCompleted: {},
+                stageLocks: {},
+                stageCleanups: {}
+              };
+            }
+            const md = ctx.metadata as any;
+            md.videoElements = md.videoElements || [];
+            md.videoElements.push(video);
           }
         }
       }

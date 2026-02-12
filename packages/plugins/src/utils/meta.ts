@@ -5,8 +5,11 @@
  */
 import type { RenderingContext } from "@chameleon/core";
 
+type RC = RenderingContext;
+type MetadataType = NonNullable<RenderingContext["metadata"]>;
+
 export type StageName = string;
-export type StageCleanupFn = (ctx: RenderingContext) => Promise<void> | void;
+export type StageCleanupFn = (ctx: RC) => Promise<void> | void;
 
 /**
  * ensureMetadata
@@ -16,12 +19,19 @@ export type StageCleanupFn = (ctx: RenderingContext) => Promise<void> | void;
  *   - stagesCompleted: record boolean completed state per stage
  * - Returns the metadata object for convenience.
  */
-export function ensureMetadata(ctx: RenderingContext): NonNullable<RenderingContext["metadata"]> {
-  ctx.metadata = ctx.metadata || {};
-  ctx.metadata.stageLocks = ctx.metadata.stageLocks || {};
-  ctx.metadata.stageCleanups = ctx.metadata.stageCleanups || {};
-  ctx.metadata.stagesCompleted = ctx.metadata.stagesCompleted || {};
-  return ctx.metadata as MetadataType;
+export function ensureMetadata(ctx: RC): MetadataType {
+  if (!ctx.metadata) {
+    ctx.metadata = {
+      stagesCompleted: {},
+      stageLocks: {},
+      stageCleanups: {}
+    };
+  }
+  const md = ctx.metadata as MetadataType;
+  md.stageLocks = md.stageLocks || {};
+  md.stageCleanups = md.stageCleanups || {};
+  md.stagesCompleted = md.stagesCompleted || {};
+  return md;
 }
 
 /**

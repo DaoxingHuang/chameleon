@@ -1,13 +1,8 @@
-import type { IPlugin, Pipeline, RenderingContext } from '@chameleon/core';
-import {
-    WebGLEngine,
-    Scene,
-    Entity,
-    Camera,
-    Vector3
-} from "@galacean/engine";
+import type { IPlugin, Pipeline, RenderingContext } from "@chameleon/core";
+import type { Entity, Scene, WebGLEngine } from "@galacean/engine";
+import { Camera } from "@galacean/engine";
 import { OrbitControl } from "@galacean/engine-toolkit";
-import { computeModelBoundingSphere } from './galaceanUtils';
+import { computeModelBoundingSphere } from "./galaceanUtils";
 
 /**
  * DefGalaceanInteractionPlugin
